@@ -14,6 +14,6 @@ Linee guida del progetto: vedi `CLAUDE.md`.
 | Wildcard (indice a k-grammi) | mio | da fare |
 | Compressione dizionario/postings | mio | da fare |
 | Correzione OCR | mio | da fare |
-| OCR (Tesseract, `ita`) | libreria/strumento esterno | da fare |
+| OCR (Tesseract `ita`, rotazione via OSD; `scripts/ocr.sh`) | libreria/strumento esterno | fatto: 134 scansioni → `data/ocr/` |
 | Parsing OCR → `data/corpus.tsv` | mio | da fare |
 | fastText (solo confronto) | libreria | da fare |
