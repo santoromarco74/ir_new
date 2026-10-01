@@ -1,25 +1,28 @@
 package ir;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 /**
  * Indice invertito scritto da me (nessuna libreria).
- * Dizionario ordinato (TreeMap) -> lista di postings (docId crescenti, senza duplicati).
+ * Dizionario ordinato (TreeMap) -> postings (docId crescenti, senza duplicati, con skip pointers).
  * I docId sono assegnati in ordine di inserimento, quindi le liste restano ordinate per costruzione.
  */
 public class InvertedIndex {
-    private final Map<String, List<Integer>> postings = new TreeMap<>();
+    private final Map<String, List<Integer>> costruzione = new TreeMap<>();
+    private final Map<String, PostingList> congelate = new HashMap<>();
     private final List<String> docs = new ArrayList<>();
 
     /** Aggiunge un documento (una riga articolo) e restituisce il suo docId. */
     public int add(String text) {
         int id = docs.size();
         docs.add(text);
+        congelate.clear();
         for (String t : Tokenizer.tokenize(text)) {
-            List<Integer> p = postings.computeIfAbsent(t, k -> new ArrayList<>());
+            List<Integer> p = costruzione.computeIfAbsent(t, k -> new ArrayList<>());
             if (p.isEmpty() || p.get(p.size() - 1) != id) p.add(id);
         }
         return id;
@@ -29,30 +32,27 @@ public class InvertedIndex {
 
     public int size() { return docs.size(); }
 
-    public List<Integer> postings(String term) {
-        return postings.getOrDefault(term, List.of());
+    /** Termini del dizionario in ordine alfabetico. */
+    public List<String> terms() { return new ArrayList<>(costruzione.keySet()); }
+
+    public boolean contains(String term) { return costruzione.containsKey(term); }
+
+    public PostingList postings(String term) {
+        List<Integer> l = costruzione.get(term);
+        if (l == null) return PostingList.VUOTA;
+        return congelate.computeIfAbsent(term, k -> new PostingList(l.stream().mapToInt(Integer::intValue).toArray()));
     }
 
-    /** AND di tutti i termini della query: intersezione a merge di liste ordinate. */
+    /** AND di tutti i termini della query, con skip pointers. */
     public List<Integer> searchAnd(String query) {
         List<String> terms = Tokenizer.tokenize(query);
         if (terms.isEmpty()) return List.of();
-        List<Integer> result = postings(terms.get(0));
-        for (int i = 1; i < terms.size() && !result.isEmpty(); i++) {
-            result = intersect(result, postings(terms.get(i)));
+        PostingList result = postings(terms.get(0));
+        for (int i = 1; i < terms.size() && result.size() > 0; i++) {
+            result = PostingList.intersect(result, postings(terms.get(i)), null);
         }
-        return result;
-    }
-
-    static List<Integer> intersect(List<Integer> a, List<Integer> b) {
         List<Integer> out = new ArrayList<>();
-        int i = 0, j = 0;
-        while (i < a.size() && j < b.size()) {
-            int x = a.get(i), y = b.get(j);
-            if (x == y) { out.add(x); i++; j++; }
-            else if (x < y) i++;
-            else j++;
-        }
+        for (int i = 0; i < result.size(); i++) out.add(result.get(i));
         return out;
     }
 }

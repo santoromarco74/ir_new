@@ -9,9 +9,9 @@ Linee guida del progetto: vedi `CLAUDE.md`.
 |---|---|---|
 | Tokenizer | mio | fatto |
 | Indice invertito (dizionario + postings, ricerca AND) | mio | fatto |
-| Skip list sui postings | mio | da fare |
-| Ricerca a trigrammi + fuzzy | mio | da fare |
-| Wildcard (indice a k-grammi) | mio | da fare |
+| Skip list sui postings (`PostingList`) | mio | fatto |
+| Indice a trigrammi sui termini + fuzzy (Jaccard + Levenshtein, `KGramIndex`, `EditDistance`) | mio | fatto |
+| Wildcard (stesso indice a k-grammi, `*` ovunque) | mio | fatto |
 | Compressione dizionario/postings | mio | da fare |
 | Correzione OCR | mio | da fare |
 | OCR (Tesseract `ita`, rotazione via OSD; `scripts/ocr.sh`) | libreria/strumento esterno | fatto: 134 scansioni → `data/ocr/` |

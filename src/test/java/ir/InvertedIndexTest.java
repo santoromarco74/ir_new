@@ -1,5 +1,6 @@
 package ir;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
@@ -21,7 +22,7 @@ class InvertedIndexTest {
 
     @Test
     void postingsOrdinati() {
-        assertEquals(List.of(0, 1), build().postings("zincata"));
+        assertArrayEquals(new int[]{0, 1}, build().postings("zincata").toArray());
     }
 
     @Test
