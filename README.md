@@ -12,7 +12,7 @@ Linee guida del progetto: vedi `CLAUDE.md`.
 | Skip list sui postings (`PostingList`) | mio | fatto |
 | Indice a trigrammi sui termini + fuzzy (Jaccard + Levenshtein, `KGramIndex`, `EditDistance`) | mio | fatto |
 | Wildcard (stesso indice a k-grammi, `*` ovunque) | mio | fatto |
-| Compressione dizionario/postings | mio | da fare |
+| Compressione: front coding sul dizionario, gap + VByte sui postings (`FrontCodedDictionary`, `VByte`, `CompressedIndex`) | mio | fatto |
 | Correzione OCR | mio | da fare |
 | OCR (Tesseract `ita`, rotazione via OSD; `scripts/ocr.sh`) | libreria/strumento esterno | fatto: 134 scansioni → `data/ocr/` |
 | Parsing OCR → `data/corpus.tsv` + righe escluse tracciate (`ir.corpus`, regex JDK) | mio | fatto |
