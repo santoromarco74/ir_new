@@ -16,5 +16,6 @@ Linee guida del progetto: vedi `CLAUDE.md`.
 | Correzione OCR mirata sui termini (scambi confusabili 0/o 1/i 5/s 6/g 8/b 7/t verso termini con df maggiore, `OcrCorrector`) | mio | fatto |
 | OCR (Tesseract `ita`, rotazione via OSD; `scripts/ocr.sh`) | libreria/strumento esterno | fatto: 134 scansioni → `data/ocr/` |
 | Parsing OCR → `data/corpus.tsv` + righe escluse tracciate (`ir.corpus`, regex JDK) | mio | fatto |
+| Interfaccia web minimale (barra di ricerca + 2 opzioni, `com.sun.net.httpserver` della JDK, `WebServer`) | mio sopra libreria standard | fatto |
 | Test collection (ricerca dell'articolo noto, rilevanza per codice) e metriche P/R/F1/accuratezza (`Benchmark`) | mio | fatto: `data/risultati_benchmark.txt` |
 | fastText (solo confronto) | libreria | da fare |
