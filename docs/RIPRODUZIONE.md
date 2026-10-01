@@ -1,0 +1,37 @@
+# Riproduzione
+
+```
+scripts/ocr.sh                                          # scansioni/ -> data/ocr/  (richiede tesseract-ocr-ita, imagemagick, poppler-utils)
+mvn -q compile
+CP="target/classes:$(mvn -q dependency:build-classpath -Dmdep.outputFile=/dev/stdout)"   # classpath con le dipendenze (serve per Benchmark)
+java -cp target/classes ir.corpus.CorpusBuilder         # data/ocr -> data/corpus.tsv, data/righe_escluse.tsv
+java -cp target/classes ir.Cli "lava*" --ocr            # prova da riga di comando
+java -cp target/classes ir.WebServer 8080               # interfaccia web su http://localhost:8080
+java -cp target/classes ir.Esempi                       # gli esempi citati nella relazione
+java -cp target/classes ir.Compressione                 # spazio prima/dopo la compressione
+java -cp target/classes ir.ValutaCorrezione             # valutazione della correzione OCR
+java -cp "$CP" ir.Benchmark                           # data/risultati_benchmark.txt
+python3 scripts/grafici.py                              # docs/img/*.svg dai risultati del benchmark
+mvn -q test                                             # test automatici
+```
+
+Le scansioni sono dati aziendali: la pipeline le legge da `scansioni/`; il lavoro prodotto (script, testo OCR, corpus estratto) sta in `scripts/` e `data/`.
+
+## Windows (PowerShell)
+
+Serve un JDK 17 o superiore a 64 bit (`java -version`); Maven non va installato, c'è il wrapper `mvnw.cmd` (al primo avvio scarica Maven). Il passo OCR (`scripts/ocr.sh`) è uno script bash: su Windows non serve rilanciarlo, perché il testo OCR è già in `data/ocr/`.
+
+```
+.\mvnw.cmd -q compile
+.\mvnw.cmd -q dependency:build-classpath "-Dmdep.outputFile=target\cp.txt"
+$CP = "target\classes;" + (Get-Content target\cp.txt)
+
+java -cp target\classes ir.corpus.CorpusBuilder      # data\ocr -> data\corpus.tsv, data\righe_escluse.tsv
+java -cp target\classes ir.Cli "lava*" --ocr          # prova da riga di comando
+java -cp target\classes ir.WebServer 8080             # interfaccia web su http://localhost:8080
+java -cp target\classes ir.Esempi
+java -cp target\classes ir.Compressione
+java -cp target\classes ir.ValutaCorrezione
+java -cp $CP ir.Benchmark                            # serve il classpath con fastText
+.\mvnw.cmd -q test
+```
