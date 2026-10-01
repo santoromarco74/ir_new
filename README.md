@@ -15,5 +15,5 @@ Linee guida del progetto: vedi `CLAUDE.md`.
 | Compressione dizionario/postings | mio | da fare |
 | Correzione OCR | mio | da fare |
 | OCR (Tesseract `ita`, rotazione via OSD; `scripts/ocr.sh`) | libreria/strumento esterno | fatto: 134 scansioni → `data/ocr/` |
-| Parsing OCR → `data/corpus.tsv` | mio | da fare |
+| Parsing OCR → `data/corpus.tsv` + righe escluse tracciate (`ir.corpus`, regex JDK) | mio | fatto |
 | fastText (solo confronto) | libreria | da fare |
