@@ -18,10 +18,16 @@ public class InvertedIndex {
 
     /** Aggiunge un documento (una riga articolo) e restituisce il suo docId. */
     public int add(String text) {
+        return add(text, Map.of());
+    }
+
+    /** Come {@link #add(String)}, ma ogni termine passa prima per la mappa di correzione (es. OcrCorrector). */
+    public int add(String text, Map<String, String> correzioni) {
         int id = docs.size();
         docs.add(text);
         congelate.clear();
-        for (String t : Tokenizer.tokenize(text)) {
+        for (String t0 : Tokenizer.tokenize(text)) {
+            String t = correzioni.getOrDefault(t0, t0);
             List<Integer> p = costruzione.computeIfAbsent(t, k -> new ArrayList<>());
             if (p.isEmpty() || p.get(p.size() - 1) != id) p.add(id);
         }
