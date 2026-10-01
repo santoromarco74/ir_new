@@ -297,7 +297,14 @@ Per una query, sia $Rel$ l'insieme dei documenti rilevanti e $Ret$ quello dei do
 
 $$P=\frac{TP}{TP+FP}\qquad R=\frac{TP}{TP+FN}\qquad F_1=\frac{2PR}{P+R}\qquad \text{acc}=\frac{TP+TN}{N}$$
 
-Se una query non restituisce nulla si pone $P=0$. I valori delle tabelle sono la **media sulle query** (macro-media). L'accuratezza è vicina a 1 per costruzione, perché quasi tutti i documenti sono veri negativi: non discrimina i sistemi e la riporto solo per completezza (è in `data/risultati_benchmark.txt`).
+In parole:
+
+- **Precisione ($P$)**: tra i documenti che il sistema restituisce, la frazione che è giusta. Misura quanto è «pulito» il risultato: scende quando compaiono righe di altri prodotti (falsi positivi, come nel caso 2 del §9.6).
+- **Richiamo ($R$)**: tra i documenti giusti, la frazione che il sistema ritrova. Misura quanto è «completo» il risultato: scende quando righe giuste non vengono trovate, per esempio perché l'OCR ha letto male il modello (falsi negativi, come nel caso 1).
+- **F1**: media armonica di precisione e richiamo. È alta solo se lo sono entrambe: un sistema che restituisce quasi tutto il corpus ha richiamo vicino a 1 ma precisione bassa, e F1 resta bassa; un sistema molto prudente ha il problema opposto.
+- **Accuratezza (acc)**: frazione di documenti classificati correttamente su tutti i 1067, cioè restituiti se rilevanti e non restituiti se non rilevanti.
+
+Se una query non restituisce nulla si pone $P=0$. I valori delle tabelle sono la **media sulle query** (macro-media). L'accuratezza è vicina a 1 per costruzione, perché per ogni query quasi tutti i documenti non sono né rilevanti né restituiti (veri negativi): non discrimina i sistemi e la riporto solo per completezza (è in `data/risultati_benchmark.txt`).
 
 **Esempio svolto.** Query `gbbsj21dep combi`, codice 972441, tre righe rilevanti. Con la ricerca esatta se ne trovano due (la terza ha `GBBSI21DEP`, con `I` al posto di `J`): $TP=2$, $FP=0$, $FN=1$.
 
