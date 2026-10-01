@@ -19,3 +19,7 @@ Linee guida del progetto: vedi `CLAUDE.md`.
 | Interfaccia web minimale (barra di ricerca + 2 opzioni, `com.sun.net.httpserver` della JDK, `WebServer`) | mio sopra libreria standard | fatto |
 | Test collection (ricerca dell'articolo noto, rilevanza per codice) e metriche P/R/F1/accuratezza (`Benchmark`) | mio | fatto: `data/risultati_benchmark.txt` |
 | fastText come modello di confronto (`FastTextConfronto`, wrapper `com.github.vinhkhuc:jfasttext`) | **libreria**, non mio contributo | fatto, solo nel benchmark |
+
+## Come eseguire
+
+Vedi `RELAZIONE.md`, §10 (Linux/macOS) e la sezione «Windows (PowerShell)» in fondo.
