@@ -1,0 +1,4 @@
+target/
+scansioni/
+*.tif
+*.tiff
