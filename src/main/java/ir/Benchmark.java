@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Test collection e metriche (complemento al lavoro sulle strutture, non il suo centro).
@@ -76,16 +77,22 @@ public final class Benchmark {
         for (Object[] s : sistemi) {
             Searcher se = new Searcher((InvertedIndex) s[1], (Searcher.ModoFuzzy) s[2]);
             for (PrintStream o : new PrintStream[]{System.out, out}) {
-                riga(o, (String) s[0], "tutte", valuta(se, esatte, false, base.size()));
-                riga(o, "", "con varianti", valuta(se, esatte, true, base.size()));
+                riga(o, (String) s[0], "tutte", valuta(se::search, esatte, false, base.size()));
+                riga(o, "", "con varianti", valuta(se::search, esatte, true, base.size()));
             }
+        }
+        // confronto con libreria di terzi (fastText): addestrato sul testo del corpus, non sull'indice corretto
+        FastTextConfronto ft = new FastTextConfronto(base);
+        for (PrintStream o : new PrintStream[]{System.out, out}) {
+            riga(o, "fastText (LIBRERIA, confronto)", "tutte", valuta(ft::search, esatte, false, base.size()));
+            riga(o, "", "con varianti", valuta(ft::search, esatte, true, base.size()));
         }
         for (PrintStream o : new PrintStream[]{System.out, out}) o.println("\nwildcard (prefisso del modello + '*'), indice senza/con correzione");
         for (Object[] s : new Object[][]{{"wildcard", base}, {"wildcard su indice corretto", corretto}}) {
             Searcher se = new Searcher((InvertedIndex) s[1], Searcher.ModoFuzzy.NO);
             for (PrintStream o : new PrintStream[]{System.out, out}) {
-                riga(o, (String) s[0], "tutte", valuta(se, jolly, false, base.size()));
-                riga(o, "", "con varianti", valuta(se, jolly, true, base.size()));
+                riga(o, (String) s[0], "tutte", valuta(se::search, jolly, false, base.size()));
+                riga(o, "", "con varianti", valuta(se::search, jolly, true, base.size()));
             }
         }
 
@@ -112,12 +119,12 @@ public final class Benchmark {
         }
     }
 
-    static double[] valuta(Searcher s, List<Query> qs, boolean soloVarianti, int nDocs) {
+    static double[] valuta(Function<String, List<Integer>> ricerca, List<Query> qs, boolean soloVarianti, int nDocs) {
         double p = 0, r = 0, f = 0, acc = 0;
         int n = 0;
         for (Query q : qs) {
             if (soloVarianti && !q.conVarianti()) continue;
-            Set<Integer> trovati = new HashSet<>(s.search(q.testo()));
+            Set<Integer> trovati = new HashSet<>(ricerca.apply(q.testo()));
             int tp = 0;
             for (int d : trovati) if (q.rilevanti().contains(d)) tp++;
             double pq = trovati.isEmpty() ? 0 : (double) tp / trovati.size();

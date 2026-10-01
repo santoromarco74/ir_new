@@ -25,9 +25,9 @@ Un sistema che cerca **articoli su bolle di trasporto (DDT) scansionate**. Il te
 | Interfaccia web minimale | `WebServer` | **Mio**, sopra il server HTTP della JDK (`com.sun.net.httpserver`); nessun framework |
 | Test collection e metriche | `Benchmark` | **Mio** |
 | Test automatici | `src/test` | JUnit 5 (libreria, solo per i test) |
-| fastText | — | **Non realizzato** (vedi §9) |
+| fastText (modello di confronto) | `FastTextConfronto` | **LIBRERIA di terzi**: fastText (Facebook) tramite il wrapper Java JFastText (`com.github.vinhkhuc:jfasttext` 0.5, JNI con libreria nativa inclusa, dipendenza `org.bytedeco:javacpp`). Addestramento e vettori sono della libreria; mio è solo l'uso come espansione dei termini (§8) |
 
-Nessuna libreria di indicizzazione (Lucene, SQLite FTS5 o simili) è usata nel sistema: tutti gli indici sono strutture in memoria scritte da me.
+Nessuna libreria di indicizzazione (Lucene, SQLite FTS5 o simili) è usata nel sistema: tutti gli indici sono strutture in memoria scritte da me. L'unica libreria di terzi che entra nel codice di ricerca è fastText, e solo come termine di confronto nel benchmark: non è usata da `Searcher`, dalla riga di comando né dall'interfaccia web.
 
 ## 3. Corpus
 
@@ -103,6 +103,8 @@ La tabella dei caratteri confondibili è stata ricavata dai dati: righe con lo s
 | correzione OCR | tutte | 0,985 | 0,853 | 0,893 |
 | correzione OCR | con righe lette diversamente | 0,965 | 0,516 | 0,657 |
 | correzione OCR + fuzzy sempre | tutte | 0,846 | 0,981 | 0,883 |
+| fastText (**libreria**, confronto) | tutte | 0,444 | 0,992 | 0,577 |
+| fastText (**libreria**, confronto) | con righe lette diversamente | 0,513 | 0,973 | 0,634 |
 | wildcard (prefisso del modello) | tutte | 0,860 | 0,890 | 0,831 |
 | wildcard (prefisso del modello) | con righe lette diversamente | 0,897 | 0,638 | 0,695 |
 
@@ -114,6 +116,7 @@ La tabella dei caratteri confondibili è stata ricavata dai dati: righe con lo s
 - Il fuzzy «sempre» porta il richiamo da 0,847 a 0,981 ma abbassa la precisione a 0,847: fonde prodotti diversi con codici vicini. È un compromesso, non un miglioramento netto.
 - La correzione OCR aumenta di poco il richiamo (da 0,496 a 0,516 sulle query con righe lette diversamente) e abbassa un po' la precisione. Quattro delle 22 correzioni non hanno nessuna riga con lo stesso codice a supporto (`1286b → 128gb`, `1p64 → ip64`, `arfoelo5 → arfoel05`, `spale → 5pale`); in due di queste anche il codice è stato letto male, quindi una correzione plausibile può essere contata come errore dal giudizio automatico.
 - Gli skip riducono i confronti, come in §4.
+- **fastText (libreria, confronto).** `FastTextConfronto` addestra un modello skipgram con n-grammi di carattere (3-6) sul solo testo del corpus; ogni termine del dizionario ha un vettore (anche quelli mai visti ne ricevono uno dai loro n-grammi) e una parola della query si espande nei termini a coseno più alto (al massimo 5 vicini con coseno ≥ 0,9), poi si usano gli stessi postings e la stessa intersezione del resto del sistema. Ha il richiamo più alto (0,992) ma la precisione più bassa (0,444): su un corpus di 1067 righe i vettori sono poco discriminanti e molti termini vicini per n-grammi non sono lo stesso prodotto (per esempio `8gb`/`6gb`). I parametri sono stati fissati a priori e **non ottimizzati sul benchmark**: una soglia di coseno più severa sposterebbe il compromesso verso la precisione, ma non l'ho provata per non tarare il confronto sul test. Con un corpus più grande il risultato potrebbe cambiare. Non supporta i caratteri jolly, quindi non compare nella riga wildcard. L'addestramento usa un solo thread per ridurre la variabilità, ma non ho verificato che i risultati siano identici tra esecuzioni.
 
 ## 9. Limiti
 
@@ -124,19 +127,20 @@ La tabella dei caratteri confondibili è stata ricavata dai dati: righe con lo s
 - La quantità resta in fondo alla descrizione e non è un campo separato; con righe senza quantità non si distingue da un numero della descrizione.
 - Una pagina (`20260703100204858`) resta capovolta anche dopo il rilevamento di orientamento.
 - Il `CompressedIndex` non è usato dal `Searcher`. Non ho misurato tempi di esecuzione né il costo della decodifica.
-- **fastText non è stato realizzato.** Era previsto come modello di confronto, da usare via libreria e da dichiarare come non mio. Non l'ho aggiunto: non ho verificato la disponibilità di un binding Java utilizzabile in questo ambiente.
+- fastText è usato solo come confronto e con parametri non ottimizzati (§8). Il wrapper `jfasttext` è un pacchetto di terzi con libreria nativa inclusa (qui usata su Linux x86-64): su altre piattaforme il test corrispondente viene saltato e il benchmark non gira senza di essa.
 
 ## 10. Riproduzione
 
 ```
 scripts/ocr.sh                                          # scansioni/ -> data/ocr/  (richiede tesseract-ocr-ita, imagemagick, poppler-utils)
 mvn -q compile
+CP="target/classes:$(mvn -q dependency:build-classpath -Dmdep.outputFile=/dev/stdout)"   # classpath con le dipendenze (serve per Benchmark)
 java -cp target/classes ir.corpus.CorpusBuilder         # data/ocr -> data/corpus.tsv, data/righe_escluse.tsv
 java -cp target/classes ir.Cli "lava*" --ocr            # prova da riga di comando
 java -cp target/classes ir.WebServer 8080               # interfaccia web su http://localhost:8080
 java -cp target/classes ir.Compressione                 # spazio prima/dopo la compressione
 java -cp target/classes ir.ValutaCorrezione             # valutazione della correzione OCR
-java -cp target/classes ir.Benchmark                    # data/risultati_benchmark.txt
+java -cp "$CP" ir.Benchmark                           # data/risultati_benchmark.txt
 mvn -q test                                             # test automatici
 ```
 

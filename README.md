@@ -18,4 +18,4 @@ Linee guida del progetto: vedi `CLAUDE.md`.
 | Parsing OCR → `data/corpus.tsv` + righe escluse tracciate (`ir.corpus`, regex JDK) | mio | fatto |
 | Interfaccia web minimale (barra di ricerca + 2 opzioni, `com.sun.net.httpserver` della JDK, `WebServer`) | mio sopra libreria standard | fatto |
 | Test collection (ricerca dell'articolo noto, rilevanza per codice) e metriche P/R/F1/accuratezza (`Benchmark`) | mio | fatto: `data/risultati_benchmark.txt` |
-| fastText (solo confronto) | libreria | da fare |
+| fastText come modello di confronto (`FastTextConfronto`, wrapper `com.github.vinhkhuc:jfasttext`) | **libreria**, non mio contributo | fatto, solo nel benchmark |
