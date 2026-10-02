@@ -7,6 +7,10 @@ CP="target/classes:$(mvn -q dependency:build-classpath -Dmdep.outputFile=/dev/st
 java -cp target/classes ir.corpus.CorpusBuilder         # data/ocr -> data/corpus.tsv, data/righe_escluse.tsv
 java -cp target/classes ir.Cli "lava*" --ocr            # prova da riga di comando
 java -cp target/classes ir.WebServer 8080               # interfaccia web su http://localhost:8080
+java -cp target/classes ir.Persistenza                  # salva l'indice compresso: data/indice.bin e data/indice_ocr.bin
+java -cp target/classes ir.Persistenza tempi carica 20  # tempo di avvio da file (oppure: tempi build 20)
+java -cp target/classes ir.Cli "lava*" --file           # ricerca sull'indice caricato da file
+java -cp target/classes ir.WebServer 8080 --file        # interfaccia web sull'indice caricato da file
 java -cp target/classes ir.Esempi                       # gli esempi citati nella relazione
 java -cp target/classes ir.Compressione                 # spazio prima/dopo la compressione
 java -cp target/classes ir.ValutaCorrezione             # valutazione della correzione OCR
@@ -29,6 +33,10 @@ $CP = "target\classes;" + (Get-Content target\cp.txt)
 java -cp target\classes ir.corpus.CorpusBuilder      # data\ocr -> data\corpus.tsv, data\righe_escluse.tsv
 java -cp target\classes ir.Cli "lava*" --ocr          # prova da riga di comando
 java -cp target\classes ir.WebServer 8080             # interfaccia web su http://localhost:8080
+java -cp target\classes ir.Persistenza                 # salva data\indice.bin e data\indice_ocr.bin
+java -cp target\classes ir.Cli "lava*" --file          # ricerca sull'indice caricato da file
+java -cp target\classes ir.WebServer 8080 --file       # interfaccia web sull'indice caricato da file
+java -cp target\classes ir.Persistenza tempi carica 20
 java -cp target\classes ir.Esempi
 java -cp target\classes ir.Compressione
 java -cp target\classes ir.ValutaCorrezione

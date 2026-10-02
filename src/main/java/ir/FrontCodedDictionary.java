@@ -1,6 +1,9 @@
 package ir;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +42,29 @@ public final class FrontCodedDictionary {
             prec = t;
         }
         dati = out.toByteArray();
+    }
+
+    private FrontCodedDictionary(byte[] dati, int[] offsetBlocchi, int n) {
+        this.dati = dati;
+        this.offsetBlocchi = offsetBlocchi;
+        this.n = n;
+    }
+
+    public void scrivi(DataOutputStream out) throws IOException {
+        out.writeInt(n);
+        out.writeInt(dati.length);
+        out.write(dati);
+        out.writeInt(offsetBlocchi.length);
+        for (int o : offsetBlocchi) out.writeInt(o);
+    }
+
+    public static FrontCodedDictionary leggi(DataInputStream in) throws IOException {
+        int n = in.readInt();
+        byte[] dati = new byte[in.readInt()];
+        in.readFully(dati);
+        int[] off = new int[in.readInt()];
+        for (int i = 0; i < off.length; i++) off[i] = in.readInt();
+        return new FrontCodedDictionary(dati, off, n);
     }
 
     public int size() { return n; }
