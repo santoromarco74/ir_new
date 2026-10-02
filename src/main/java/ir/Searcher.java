@@ -5,24 +5,24 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Ricerca sopra InvertedIndex + KGramIndex (tutto mio). Query = parole separate da spazio, in AND.
+ * Ricerca sopra un Indice (InvertedIndex o CompressedIndex) + KGramIndex (tutto mio). Query = parole separate da spazio, in AND.
  * Ogni parola: con '*' -> wildcard (OR dei termini espansi); altrimenti dipende dal {@link ModoFuzzy}:
  * NO = solo esatta; FALLBACK = fuzzy solo se la parola non e' nel dizionario; SEMPRE = sempre OR dei termini simili.
  */
 public final class Searcher {
-    private final InvertedIndex index;
+    private final Indice index;
     private final KGramIndex kgrams;
     private final ModoFuzzy modo;
 
     public enum ModoFuzzy { NO, FALLBACK, SEMPRE }
 
-    public Searcher(InvertedIndex index, ModoFuzzy modo) {
+    public Searcher(Indice index, ModoFuzzy modo) {
         this.index = index;
         this.kgrams = new KGramIndex(index.terms(), 3);
         this.modo = modo;
     }
 
-    public Searcher(InvertedIndex index, boolean fuzzyFallback) {
+    public Searcher(Indice index, boolean fuzzyFallback) {
         this(index, fuzzyFallback ? ModoFuzzy.FALLBACK : ModoFuzzy.NO);
     }
 

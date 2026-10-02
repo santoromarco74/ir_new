@@ -13,6 +13,7 @@ Linee guida del progetto: vedi `CLAUDE.md`.
 | Indice a trigrammi sui termini + fuzzy (Jaccard + Levenshtein, `KGramIndex`, `EditDistance`) | mio | fatto |
 | Wildcard (stesso indice a k-grammi, `*` ovunque) | mio | fatto |
 | Compressione: front coding sul dizionario, gap + VByte sui postings (`FrontCodedDictionary`, `VByte`, `CompressedIndex`) | mio | fatto |
+| Indice persistente su file (`CompressedIndex.salva/carica`, `Persistenza`, interfaccia `Indice`) | mio (`java.io` della JDK) | fatto |
 | Correzione OCR mirata sui termini (scambi confusabili 0/o 1/i 5/s 6/g 8/b 7/t verso termini con df maggiore, `OcrCorrector`) | mio | fatto |
 | OCR (Tesseract `ita`, rotazione via OSD; `scripts/ocr.sh`) | libreria/strumento esterno | fatto: 134 scansioni → `data/ocr/` |
 | Parsing OCR → `data/corpus.tsv` + righe escluse tracciate (`ir.corpus`, regex JDK) | mio | fatto |

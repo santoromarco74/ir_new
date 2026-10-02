@@ -11,7 +11,7 @@ import java.util.TreeMap;
  * Dizionario ordinato (TreeMap) -> postings (docId crescenti, senza duplicati, con skip pointers).
  * I docId sono assegnati in ordine di inserimento, quindi le liste restano ordinate per costruzione.
  */
-public class InvertedIndex {
+public class InvertedIndex implements Indice {
     private final Map<String, List<Integer>> costruzione = new TreeMap<>();
     private final Map<String, PostingList> congelate = new HashMap<>();
     private final List<String> docs = new ArrayList<>();
@@ -34,15 +34,20 @@ public class InvertedIndex {
         return id;
     }
 
+    @Override
     public String doc(int id) { return docs.get(id); }
 
+    @Override
     public int size() { return docs.size(); }
 
     /** Termini del dizionario in ordine alfabetico. */
+    @Override
     public List<String> terms() { return new ArrayList<>(costruzione.keySet()); }
 
+    @Override
     public boolean contains(String term) { return costruzione.containsKey(term); }
 
+    @Override
     public PostingList postings(String term) {
         List<Integer> l = costruzione.get(term);
         if (l == null) return PostingList.VUOTA;

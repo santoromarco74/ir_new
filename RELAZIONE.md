@@ -12,7 +12,7 @@ Un sistema che cerca **articoli su bolle di trasporto (DDT) scansionate**. Una b
 - punteggiatura e lettere sparse (`GBBSJ21DEP_`, `i`, `|` in mezzo alla riga);
 - pagine capovolte, che senza correzione producono testo illeggibile.
 
-Un utente che cerca il codice o il modello corretto non trova le righe in cui l'OCR lo ha letto male. Il lavoro è concentrato sulle **strutture dati e sugli algoritmi di indicizzazione e recupero**, che ho scritto io, e sul modo in cui reagiscono al rumore. Il benchmark (§9) è un complemento che misura se le scelte servono; non è il centro del lavoro.
+Un utente che cerca il codice o il modello corretto non trova le righe in cui l'OCR lo ha letto male. Il lavoro è concentrato sulle **strutture dati e sugli algoritmi di indicizzazione e recupero**, che ho realizzato con il supporto di un assistente IA (dichiarazione al §13), e sul modo in cui reagiscono al rumore. Il benchmark (§9) è un complemento che misura se le scelte servono; non è il centro del lavoro.
 
 ## 2. Architettura e confine «mio / libreria»
 
@@ -30,8 +30,10 @@ data/ocr/*.txt  ──►  OcrParser + CorpusBuilder  [mio]  ──►  data/cor
                                     ▲                         ▲
                            OcrCorrector (riscrive i termini)  │
                                                               │
-                 CompressedIndex (VByte + front coding)       └── Benchmark (confronta anche fastText: libreria)
+                 CompressedIndex (VByte + front coding) ⇄ data/indice.bin   └── Benchmark (confronta anche fastText: libreria)
 ```
+
+«Mio» indica ciò che non viene da librerie di terzi e che è stato realizzato nell'ambito del progetto; il supporto dell'assistente IA nella realizzazione è dichiarato al §13.
 
 | Componente | File | Mio / libreria |
 |---|---|---|
@@ -43,6 +45,7 @@ data/ocr/*.txt  ──►  OcrParser + CorpusBuilder  [mio]  ──►  data/cor
 | Liste di postings con skip pointers, intersezione, unione | `PostingList` | **Mio** |
 | Indice a trigrammi sui termini; ricerca wildcard; ricerca fuzzy (Jaccard sui trigrammi + distanza di edit) | `KGramIndex`, `EditDistance` | **Mio** |
 | Compressione: gap + variable byte, front coding | `VByte`, `FrontCodedDictionary`, `CompressedIndex` | **Mio** |
+| Indice persistente: salvataggio e caricamento da file | `CompressedIndex.salva/carica`, `Persistenza`, `Indice` | **Mio** (solo `java.io` della JDK) |
 | Correzione OCR mirata | `OcrCorrector` | **Mio** |
 | Motore di ricerca che compone le parti | `Searcher` | **Mio** |
 | Interfaccia web minimale | `WebServer` | **Mio**, sopra il server HTTP della JDK (`com.sun.net.httpserver`); nessun framework |
@@ -51,7 +54,7 @@ data/ocr/*.txt  ──►  OcrParser + CorpusBuilder  [mio]  ──►  data/cor
 | Test automatici | `src/test` | JUnit 5 (libreria, solo per i test) |
 | fastText (modello di confronto) | `FastTextConfronto` | **LIBRERIA di terzi**: fastText (Facebook) tramite il wrapper Java JFastText (`com.github.vinhkhuc:jfasttext` 0.5, JNI con libreria nativa inclusa, dipendenza `org.bytedeco:javacpp`). Addestramento e vettori sono della libreria; mio è solo l'uso come espansione dei termini (§9.7) |
 
-Nessuna libreria di indicizzazione (Lucene, SQLite FTS5 o simili) è usata nel sistema: tutti gli indici sono strutture in memoria scritte da me, e non c'è un database. L'unica libreria di terzi che entra nel codice di ricerca è fastText, e solo come termine di confronto nel benchmark: non è usata da `Searcher`, dalla riga di comando né dall'interfaccia web.
+Nessuna libreria di indicizzazione (Lucene, SQLite FTS5 o simili) è usata nel sistema: tutti gli indici sono strutture scritte da me, tenute in memoria durante la ricerca; non c'è un database. L'indice può essere salvato su un file e ricaricato (§7.3). L'unica libreria di terzi che entra nel codice di ricerca è fastText, e solo come termine di confronto nel benchmark: non è usata da `Searcher`, dalla riga di comando né dall'interfaccia web.
 
 ## 3. Il corpus: dalla scansione alla riga articolo
 
@@ -230,7 +233,7 @@ I termini ordinati condividono spesso un prefisso col precedente. A blocchi di 8
 | `friggitrice` | (2, `iggitrice`) |
 | `friggitrici` | (10, `i`) |
 
-La ricerca di un termine fa una ricerca binaria sulle teste dei blocchi e poi una scansione lineare dentro il blocco. `CompressedIndex` è la versione compressa, a sola lettura, dell'intero indice: i postings si decodificano al volo in una `PostingList`. Il test verifica che termini e postings coincidano con quelli dell'indice non compresso.
+La ricerca di un termine fa una ricerca binaria sulle teste dei blocchi e poi una scansione lineare dentro il blocco. `CompressedIndex` è la versione compressa, a sola lettura, dell'intero indice: i postings si decodificano al volo in una `PostingList`. I test verificano che termini e postings coincidano con quelli dell'indice non compresso.
 
 | Struttura | Non compressa | Compressa | Rapporto |
 |---|---|---|---|
@@ -238,6 +241,29 @@ La ricerca di un termine fa una ricerca binaria sulle teste dei blocchi e poi un
 | Dizionario (UTF-8 + 1 byte di lunghezza per termine) | 22947 byte | 19400 byte | 85% |
 
 I postings guadagnano molto. Il dizionario poco, perché in gran parte è fatto di codici e modelli che condividono pochi prefissi (nel blocco sopra solo `friggitrice`/`friggitrici` guadagnano davvero). Le due basi di confronto e la dimensione del blocco sono scelte mie, non ottimizzate; non ho misurato il costo in tempo della decodifica.
+
+### 7.3 Persistenza dell'indice
+
+Per impostazione predefinita l'indice **non è persistente**: ogni avvio di `ir.Cli` o `ir.WebServer` rilegge `data/corpus.tsv` e lo ricostruisce in memoria (tokenizzazione, indice invertito, e per la correzione OCR anche il calcolo delle correzioni). Per evitarlo, `ir.Persistenza` costruisce l'indice, lo comprime e lo salva su file; `--file` lo ricarica invece di ricostruirlo.
+
+Il file (`data/indice.bin`, e `data/indice_ocr.bin` per l'indice con correzione OCR) contiene, nell'ordine: un'intestazione (numero magico e versione, controllati al caricamento), i testi dei documenti, il dizionario con front coding e i postings con gap e VByte, più gli offset che servono per trovarli. **L'indice a trigrammi non è salvato**: il `Searcher` lo ricostruisce dai termini a ogni avvio, sia che l'indice arrivi dal corpus sia che arrivi dal file. Il formato e la lettura usano solo le classi `java.io` della JDK.
+
+I test verificano tre cose: dopo il salvataggio e il ricaricamento termini, postings e testi sono identici; la ricerca (esatta, wildcard, fuzzy in tutte le modalità) dà gli stessi risultati sull'indice ricaricato e su quello in memoria; un file che non è un indice viene rifiutato.
+
+Tempo per essere pronti a cercare, cioè indice più indice a trigrammi (macchina di sviluppo, tre esecuzioni con JVM nuova per la misura a freddo, venti ripetizioni per quella a caldo):
+
+| | Ricostruzione da `corpus.tsv` | Caricamento da file |
+|---|---|---|
+| A freddo (JVM nuova, 1 ripetizione) | 82-94 ms | 60-65 ms |
+| A caldo (mediana di 20 ripetizioni) | 13,5 ms | 8,3 ms |
+
+| File | Dimensione |
+|---|---|
+| `data/corpus.tsv` | 111770 byte |
+| `data/indice.bin` | 119703 byte |
+| `data/indice_ocr.bin` | 119525 byte |
+
+**Lettura.** Il caricamento da file è più veloce, ma di poco (circa un terzo in meno a freddo): su 1067 documenti la costruzione è già rapida e una parte del tempo, avvio della JVM e costruzione dei trigrammi, è uguale nei due casi. Il file non è più piccolo del corpus perché contiene anche i testi dei documenti, non compressi (più di metà del file); la compressione riguarda solo dizionario e postings (§7.1, §7.2). Non ho verificato come il vantaggio cresca con corpora più grandi, dove la costruzione costa di più. I postings si decodificano a ogni ricerca; non ho misurato il costo in tempo delle interrogazioni su un indice caricato da file.
 
 ## 8. Correzione OCR mirata
 
@@ -378,7 +404,7 @@ Esatta e correzione OCR: P = R = F1 = 1,000. Fuzzy sempre: $TP=2$, $FP=2$, $FN=0
 
 `WebServer` mostra una barra di ricerca e due opzioni, sopra lo stesso `Searcher`. Il server è quello della JDK, la pagina HTML è generata lato server, senza JavaScript né framework; il testo dei risultati e la query sono sottoposti a escape.
 
-Le opzioni sono la modalità fuzzy (no / solo se la parola non esiste / sempre) e l'uso dell'indice con correzione OCR. Il carattere `*` vale come jolly. `ir.Cli` offre la stessa ricerca da riga di comando (`--ocr`, `--no-fuzzy`).
+Le opzioni sono la modalità fuzzy (no / solo se la parola non esiste / sempre) e l'uso dell'indice con correzione OCR. Il carattere `*` vale come jolly. `ir.Cli` offre la stessa ricerca da riga di comando (`--ocr`, `--no-fuzzy`). Sia `ir.Cli` sia `ir.WebServer` accettano `--file` per caricare l'indice persistente di §7.3 invece di ricostruirlo dal corpus.
 
 ## 11. Discussione e limiti
 
@@ -396,9 +422,33 @@ Le opzioni sono la modalità fuzzy (no / solo se la parola non esiste / sempre) 
 - Il fuzzy «solo se assente» non parte se un errore OCR è, per caso, un'altra parola valida; la modalità «sempre» lo copre ma introduce falsi positivi.
 - La quantità resta in fondo alla descrizione e non è un campo separato; con righe senza quantità non si distingue da un numero della descrizione.
 - 5 documenti hanno numero e data illeggibili e una pagina (`20260703100204858`) resta capovolta anche dopo il rilevamento di orientamento.
-- `CompressedIndex` non è usato da `Searcher`. Ho misurato i confronti fra docId e le dimensioni, non i tempi di esecuzione né il costo della decodifica.
+- L'indice è persistente solo se lo si salva esplicitamente (`ir.Persistenza`): per impostazione predefinita viene ricostruito in memoria a ogni avvio. Anche con il file l'indice a trigrammi si ricostruisce a ogni avvio, i testi dei documenti sono salvati non compressi e il guadagno di tempo è piccolo su questo corpus (§7.3).
+- L'indice salvato è a sola lettura: aggiungere documenti richiede di ricostruirlo. I postings si decodificano a ogni ricerca; ho misurato i confronti fra docId, le dimensioni e i tempi di avvio, non i tempi delle interrogazioni né il costo della decodifica.
 - fastText è usato solo come confronto e con parametri non ottimizzati (§9.7). Il wrapper `jfasttext` è un pacchetto di terzi con libreria nativa inclusa (usata su Linux e Windows x86-64); su altre piattaforme il test corrispondente viene saltato e il benchmark non gira senza di essa.
 
 ## 12. Riproduzione
 
 I comandi per rigenerare corpus, esempi, grafici e benchmark (Linux/macOS e Windows PowerShell) sono in `docs/RIPRODUZIONE.md`.
+
+## 13. Dichiarazione sull'utilizzo di strumenti di Intelligenza Artificiale
+
+Nella stesura del presente progetto («Archivio Bolle», complemento all'esame di Information Retrieval) sono stati utilizzati i seguenti strumenti di Intelligenza Artificiale, come richiesto dalle Linee Guida per l'utilizzo dell'Intelligenza Artificiale dell'Università di Pavia (Delibera del Consiglio di Amministrazione n. 153/2026 del 22/05/2026):
+
+- **Strumento utilizzato**: Claude (Anthropic), usato tramite Claude Code, assistente di programmazione, in sessioni di lavoro su ambiente cloud. Versione del modello: [da indicare, se richiesta].
+
+- **Perimetro di applicazione**:
+  - il codice Java del sistema (parser del testo OCR, indice invertito, skip list, indice a trigrammi con ricerca wildcard e fuzzy, compressione, persistenza dell'indice, correzione OCR, benchmark, interfaccia web) e i relativi test automatici; gli script di supporto (OCR, grafici) e la configurazione di Maven;
+  - la bozza della relazione (testo, tabelle, formule ed esempi ricavati dall'esecuzione del codice) e della documentazione (README, istruzioni di riproduzione);
+  - l'esecuzione dei programmi di misura (benchmark e valutazioni) e la correzione degli errori emersi.
+
+  Obiettivi e vincoli del progetto sono descritti nel file `CLAUDE.md`, fornito dall'autore all'assistente. Le scansioni delle bolle e il testo OCR da esse ricavato sono stati elaborati nell'ambiente di lavoro dell'assistente.
+
+- **Modalità di impiego**: generazione di codice su indicazioni dell'autore, poi eseguito e verificato con test automatici (anch'essi scritti con l'assistente); debugging; stesura e revisione della bozza della relazione e della documentazione su richiesta dell'autore; analisi dei risultati sperimentali.
+
+- **Altri strumenti software**: Tesseract (OCR) e fastText sono componenti usati dal sistema e descritti al §2 della relazione; non sono strumenti usati per redigere il lavoro.
+
+<!-- DA VERIFICARE PRIMA DI CONSEGNARE: la frase seguente va tenuta solo se è vera. Vedi le azioni consigliate nella risposta di Claude Code. -->
+Si dichiara che tutti i contenuti generati con il supporto dell'IA sono stati criticamente verificati e rielaborati personalmente, e che l'autore si assume la piena responsabilità della correttezza e dell'originalità del lavoro presentato.
+
+[Nome e cognome]
+[Data]

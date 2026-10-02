@@ -16,15 +16,20 @@ import java.util.Map;
  * Interfaccia web minimale: una barra di ricerca e due opzioni, sopra lo stesso {@link Searcher}.
  * Server HTTP della JDK (com.sun.net.httpserver), pagina HTML generata lato server, nessun framework.
  *
- * Uso: java -cp target/classes ir.WebServer [porta]   poi apri http://localhost:8080
+ * Uso: java -cp target/classes ir.WebServer [porta] [--file]   poi apri http://localhost:8080
+ * (--file = carica gli indici persistenti prodotti da ir.Persistenza invece di ricostruirli dal corpus)
  */
 public final class WebServer {
-    private final InvertedIndex base, corretto;
+    private final Indice base, corretto;
     private final Map<Boolean, Map<Searcher.ModoFuzzy, Searcher>> searcher = new HashMap<>();
 
     WebServer(InvertedIndex base) {
+        this(base, OcrCorrector.applica(base, OcrCorrector.calcola(base)));
+    }
+
+    WebServer(Indice base, Indice corretto) {
         this.base = base;
-        this.corretto = OcrCorrector.applica(base, OcrCorrector.calcola(base));
+        this.corretto = corretto;
         for (boolean ocr : new boolean[]{false, true}) {
             Map<Searcher.ModoFuzzy, Searcher> m = new EnumMap<>(Searcher.ModoFuzzy.class);
             for (Searcher.ModoFuzzy f : Searcher.ModoFuzzy.values()) m.put(f, new Searcher(ocr ? corretto : base, f));
@@ -84,8 +89,9 @@ public final class WebServer {
     }
 
     public static void main(String[] args) throws IOException {
-        WebServer w = new WebServer(caricaCorpus());
-        int porta = args.length > 0 ? Integer.parseInt(args[0]) : 8080;
+        boolean daFile = List.of(args).contains("--file");
+        WebServer w = daFile ? new WebServer(Persistenza.apri(false, true), Persistenza.apri(true, true)) : new WebServer(caricaCorpus());
+        int porta = args.length > 0 && !args[0].startsWith("--") ? Integer.parseInt(args[0]) : 8080;
         HttpServer srv = HttpServer.create(new InetSocketAddress("127.0.0.1", porta), 0);
         srv.createContext("/", ex -> {
             Map<String, String> p = parametri(ex.getRequestURI().getRawQuery());
