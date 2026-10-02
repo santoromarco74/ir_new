@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Indice invertito scritto da me (nessuna libreria).
+ * Indice invertito (nessuna libreria).
  * Dizionario ordinato (TreeMap) -> postings (docId crescenti, senza duplicati, con skip pointers).
  * I docId sono assegnati in ordine di inserimento, quindi le liste restano ordinate per costruzione.
  */

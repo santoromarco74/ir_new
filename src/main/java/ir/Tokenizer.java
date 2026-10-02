@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/** Tokenizzazione scritta da me: minuscolo, separazione sui caratteri non alfanumerici. */
+/** Tokenizzazione: minuscolo, separazione sui caratteri non alfanumerici. */
 public final class Tokenizer {
     private Tokenizer() {}
 

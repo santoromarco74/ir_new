@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Passi 3-4 della pipeline (miei): applica {@link OcrParser} a ogni file di data/ocr,
+ * Passi 3-4 della pipeline: applica {@link OcrParser} a ogni file di data/ocr,
  * scrive data/corpus.tsv e data/righe_escluse.tsv (pulizia tracciata).
  * Un file senza nessuna riga articolo (layout di un altro fornitore) e' escluso per intero e registrato.
  *

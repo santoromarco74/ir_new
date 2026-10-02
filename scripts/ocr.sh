@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Passo 1 della pipeline: scansione -> testo grezzo. Strumenti esterni (Tesseract lingua ita,
-# ImageMagick, poppler), non miei. L'orientamento di ogni pagina si rileva con l'OSD di Tesseract:
+# ImageMagick, poppler), non parte del codice del progetto. L'orientamento di ogni pagina si rileva con l'OSD di Tesseract:
 # parte delle scansioni e' capovolta di 180 gradi.
 # Uso: scripts/ocr.sh [cartella_scansioni] [cartella_output]
 set -euo pipefail

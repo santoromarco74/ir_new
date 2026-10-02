@@ -9,7 +9,7 @@
 
 ## Scopo
 
-Un sistema che cerca **articoli su bolle/DDT scansionati** (testo OCR, quindi rumoroso), con **indici e algoritmi di recupero sviluppati da me**, e una valutazione sperimentale come complemento.
+Un sistema che cerca **articoli su bolle/DDT scansionati** (testo OCR, quindi rumoroso), con **indici e algoritmi di recupero sviluppati nel progetto**, e una valutazione sperimentale come complemento.
 
 ## Indicazioni del docente (vincolo centrale)
 
@@ -18,12 +18,12 @@ Un sistema che cerca **articoli su bolle/DDT scansionati** (testo OCR, quindi ru
 Conseguenze operative:
 
 1. **Il peso sta nelle strutture dati e negli algoritmi**, non nel benchmarking. Il benchmark è un complemento.
-2. **Gli indici del sistema li costruisco io** (indice invertito, indice a k-grammi, ecc.). Le librerie di terze parti (SQLite FTS5, Lucene o altre) non fanno il lavoro centrale: al più servono come **termine di confronto**, dichiarate come tali.
-3. **Nel documento finale deve essere evidente cosa è sviluppato da me e cosa viene da librerie.** Tenere aggiornata una tabella «sviluppato da me / libreria» per ogni componente, da riportare nella relazione.
+2. **Gli indici del sistema sono costruiti nel progetto** (indice invertito, indice a k-grammi, ecc.). Le librerie di terze parti (SQLite FTS5, Lucene o altre) non fanno il lavoro centrale: al più servono come **termine di confronto**, dichiarate come tali.
+3. **Nel documento finale deve essere evidente cosa è sviluppato nel progetto e cosa viene da librerie.** Tenere aggiornata una tabella «codice / libreria» per ogni componente, da riportare nella relazione.
 
 ## Componenti in perimetro
 
-Sviluppati da me (strutture dati e algoritmi):
+Codice del progetto (strutture dati e algoritmi):
 
 - indice invertito e ricerca a trigrammi (con fallback fuzzy)
 - ricerca wildcard (indice a k-grammi sui termini)
@@ -31,7 +31,7 @@ Sviluppati da me (strutture dati e algoritmi):
 - compressione degli indici (dizionario, postings)
 - correzione OCR mirata
 
-Da libreria (non è un mio contributo, va dichiarato come tale nella tabella «mio / libreria»):
+Da libreria (non è codice del progetto, va dichiarato come tale nella tabella «codice / libreria»):
 
 - fastText (n-grammi di carattere appresi): solo come modello di confronto, usato via libreria
 
@@ -39,7 +39,7 @@ Contorno:
 
 - interfaccia web minimale: una barra di ricerca e le opzioni, nient'altro, sopra la stessa ricerca
 - benchmark e test collection ridotta, con le metriche del corso (precisione, richiamo, F1, accuratezza; MAP solo se serve)
-- relazione che documenta le strutture, con il confine «mio / libreria» ben visibile
+- relazione che documenta le strutture, con il confine «codice / libreria» ben visibile
 
 L'elenco è aperto («…»): altre strutture si aggiungono solo se motivate.
 
@@ -47,10 +47,10 @@ L'elenco è aperto («…»): altre strutture si aggiungono solo se motivate.
 
 Il corpus non si copia dal vecchio progetto: si genera da un **campione piccolo** (10-15 bolle, TIFF o PDF) con una pipeline riproducibile, così nella relazione si vede come nasce:
 
-1. **OCR** — scansione → testo grezzo. Strumento esterno, **non mio**: Tesseract, lingua italiana (`ita`).
+1. **OCR** — scansione → testo grezzo. Strumento esterno, **non codice del progetto**: Tesseract, lingua italiana (`ita`).
    - Download: https://github.com/tesseract-ocr/tesseract (build Windows: https://github.com/UB-Mannheim/tesseract/wiki). Già installato sulla macchina di Marco.
-2. **Parsing** — testo grezzo → righe articolo (+ numero e data del documento). **Mio**: regex e logica scritte da me.
-3. **Pulizia tracciata** — le righe scartate si registrano, non si cancellano in silenzio. **Mio**.
+2. **Parsing** — testo grezzo → righe articolo (+ numero e data del documento). **Codice**: regex e logica del progetto.
+3. **Pulizia tracciata** — le righe scartate si registrano, non si cancellano in silenzio. **Codice**.
 4. **Output** — `data/corpus.tsv`, versionato.
 
 Le scansioni sono dati aziendali: **non vanno nel repo** (solo script e corpus già estratto). Il parser si scrive guardando testo OCR reale di un campione, non a memoria.
@@ -61,8 +61,8 @@ Embedding semantici, menu di esperimenti, script di consegna, più relazioni sep
 
 ## Regole operative
 
-1. Ogni componente deve rispondere a: *che struttura dati o algoritmo porta di mio?* Se non porta nulla, non si fa.
-2. Se un componente usa una libreria, dichiararlo subito nel codice e nella tabella «mio / libreria».
+1. Ogni componente deve rispondere a: *che struttura dati o algoritmo porta il progetto?* Se non porta nulla, non si fa.
+2. Se un componente usa una libreria, dichiararlo subito nel codice e nella tabella «codice / libreria».
 3. Il benchmark non diventa mai il centro del lavoro.
 4. Se non è chiaro cosa serve per la consegna, **chiedere** invece di supporre.
 5. Nessuna struttura "per il futuro": solo ciò che serve ora.

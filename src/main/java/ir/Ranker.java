@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Punteggio dei documenti (mio): TF-IDF e BM25 calcolati sulle frequenze dei termini dell'indice.
+ * Punteggio dei documenti: TF-IDF e BM25 calcolati sulle frequenze dei termini dell'indice.
  *
  * TF-IDF (schema SMART lnc.ltn, Manning-Raghavan-Schutze cap. 6): peso del termine nel documento
  * (1 + ln tf), normalizzato col coseno sul vettore del documento; peso del termine nella query = idf = ln(N/df).

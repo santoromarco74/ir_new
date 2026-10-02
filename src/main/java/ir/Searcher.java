@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Ricerca sopra un Indice (InvertedIndex o CompressedIndex) + KGramIndex (tutto mio). Query = parole separate da spazio, in AND.
+ * Ricerca sopra un Indice (InvertedIndex o CompressedIndex) + KGramIndex. Query = parole separate da spazio, in AND.
  * Ogni parola: con '*' -> wildcard (OR dei termini espansi); altrimenti dipende dal {@link ModoFuzzy}:
  * NO = solo esatta; FALLBACK = fuzzy solo se la parola non e' nel dizionario; SEMPRE = sempre OR dei termini simili.
  */

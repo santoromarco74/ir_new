@@ -6,7 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Passo 2 della pipeline (scritto da me, solo java.util.regex della JDK): testo OCR di una bolla
+ * Passo 2 della pipeline (solo java.util.regex della JDK): testo OCR di una bolla
  * -> numero/data del documento + righe articolo. Ogni riga non articolo viene classificata e
  * restituita come "esclusa" con un motivo, mai buttata in silenzio.
  *

@@ -6,7 +6,7 @@ Complemento all'esame di Information Retrieval (laurea magistrale in Computer En
 
 Un sistema che cerca **articoli su bolle di trasporto (DDT) scansionate**. Ogni bolla ha un'intestazione e una riga per articolo (codice, marca, descrizione abbreviata, quantità). Il testo viene da un OCR ed è rumoroso: caratteri scambiati (`0/O`, `5/S`, `6/G`: nel corpus `LGE S5UR781C0LK` è il modello `55UR781C0LK` letto male), punteggiatura sparsa, pagine capovolte. Chi cerca il modello corretto non trova le righe lette male. Il lavoro riguarda le **strutture dati e gli algoritmi di indicizzazione e recupero**, realizzati con il supporto di un assistente IA (§14), e il loro comportamento con il rumore; il benchmark (§10) è un complemento.
 
-## 2. Architettura e confine «mio / libreria»
+## 2. Architettura e confine «codice / libreria»
 
 ```
 scansioni ─ OCR (Tesseract + rotazione OSD, esterno) ─► data/ocr/*.txt ─ OcrParser/CorpusBuilder ─► data/corpus.tsv
@@ -17,21 +17,21 @@ Tokenizer ─► InvertedIndex ─► PostingList (skip pointers) ◄── inte
 OcrCorrector riscrive i termini dell'indice                      Benchmark confronta anche fastText (libreria)
 ```
 
-| Componente | File | Mio / libreria |
+| Componente | File | Codice / libreria |
 |---|---|---|
-| OCR | `scripts/ocr.sh` | **Strumento esterno**: Tesseract (`ita`, orientamento OSD), ImageMagick, poppler. Lo script è mio, i programmi no |
-| Parsing, pulizia, `corpus.tsv` | `ir.corpus.OcrParser`, `CorpusBuilder` | **Mio** (`java.util.regex`) |
-| Tokenizzazione, indice invertito, postings con skip pointers | `Tokenizer`, `InvertedIndex`, `PostingList` | **Mio** (`TreeMap`/`ArrayList` della JDK) |
-| Trigrammi, wildcard, fuzzy (Jaccard + Levenshtein) | `KGramIndex`, `EditDistance` | **Mio** |
-| Compressione e persistenza (VByte, front coding, file) | `VByte`, `FrontCodedDictionary`, `CompressedIndex`, `Persistenza`, `Indice` | **Mio** (`java.io`) |
-| Ranking TF-IDF e BM25 | `Ranker`, `Searcher` | **Mio** |
-| Correzione OCR | `OcrCorrector` | **Mio** |
-| Interfaccia web e riga di comando | `WebServer`, `Cli` | **Mio**, sopra `com.sun.net.httpserver` della JDK |
-| Benchmark, esempi, grafici | `Benchmark`, `Esempi`, `scripts/grafici.py` | **Mio** (grafici: Python, sola libreria standard) |
+| OCR | `scripts/ocr.sh` | **Libreria / strumento esterno**: Tesseract (`ita`, orientamento OSD), ImageMagick, poppler. Lo script che li lancia è codice del progetto, i programmi no |
+| Parsing, pulizia, `corpus.tsv` | `ir.corpus.OcrParser`, `CorpusBuilder` | **Codice** (`java.util.regex`) |
+| Tokenizzazione, indice invertito, postings con skip pointers | `Tokenizer`, `InvertedIndex`, `PostingList` | **Codice** (`TreeMap`/`ArrayList` della JDK) |
+| Trigrammi, wildcard, fuzzy (Jaccard + Levenshtein) | `KGramIndex`, `EditDistance` | **Codice** |
+| Compressione e persistenza (VByte, front coding, file) | `VByte`, `FrontCodedDictionary`, `CompressedIndex`, `Persistenza`, `Indice` | **Codice** (`java.io`) |
+| Ranking TF-IDF e BM25 | `Ranker`, `Searcher` | **Codice** |
+| Correzione OCR | `OcrCorrector` | **Codice** |
+| Interfaccia web e riga di comando | `WebServer`, `Cli` | **Codice**, sopra `com.sun.net.httpserver` della JDK |
+| Benchmark, esempi, grafici | `Benchmark`, `Esempi`, `scripts/grafici.py` | **Codice** (grafici: Python, sola libreria standard) |
 | Test automatici | `src/test` | JUnit 5 (libreria) |
-| fastText (solo confronto) | `FastTextConfronto` | **LIBRERIA di terzi**: fastText (Facebook) tramite il wrapper Java `com.github.vinhkhuc:jfasttext` 0.5 (JNI, dipende da `org.bytedeco:javacpp`). Addestramento e vettori sono della libreria; mio è solo l'uso come espansione dei termini (§10.5) |
+| fastText (solo confronto) | `FastTextConfronto` | **Libreria** di terzi: fastText (Facebook) tramite il wrapper Java `com.github.vinhkhuc:jfasttext` 0.5 (JNI, dipende da `org.bytedeco:javacpp`). Addestramento e vettori sono della libreria; il codice del progetto contiene solo l'uso come espansione dei termini (§10.5) |
 
-«Mio» indica ciò che non viene da librerie di terzi ed è stato realizzato nel progetto; il supporto dell'assistente IA è dichiarato al §14. Nessuna libreria di indicizzazione (Lucene, SQLite FTS5…) è usata e non c'è un database: gli indici sono strutture scritte da me, tenute in memoria durante la ricerca, con una copia salvabile su file (§7.3). fastText compare solo nel benchmark, non in `Searcher`, riga di comando o interfaccia web.
+«Codice» indica ciò che è realizzato nel progetto e non viene da librerie di terzi; «libreria» indica software di terzi. Il supporto dell'assistente IA è dichiarato al §14. Nessuna libreria di indicizzazione (Lucene, SQLite FTS5…) è usata e non c'è un database: gli indici sono strutture realizzate nel progetto, tenute in memoria durante la ricerca, con una copia salvabile su file (§7.3). fastText compare solo nel benchmark, non in `Searcher`, riga di comando o interfaccia web.
 
 ## 3. Il corpus: dalla scansione alla riga articolo
 
@@ -73,7 +73,7 @@ Gli skip servono quando una lista è molto più lunga dell'altra. Confronti fra 
 | `tv` AND `aria` | 135 e 14 | 143 | 101 |
 | `tv` AND `8gb` | 135 e 67 | 201 | 163 |
 
-Sulle 214 query del benchmark (modello AND parola) i confronti scendono da 8718 a 2343; con un termine molto frequente (`2`, df 312, una quantità) da 45824 a 6552, caso favorevole di proposito. Il risultato coincide con quello del merge lineare (test su 200 coppie casuali). Ho contato i confronti, non i tempi.
+Sulle 214 query del benchmark (modello AND parola) i confronti scendono da 8718 a 2343; con un termine molto frequente (`2`, df 312, una quantità) da 45824 a 6552, caso favorevole di proposito. Il risultato coincide con quello del merge lineare (test su 200 coppie casuali). Sono stati contati i confronti, non i tempi.
 
 ## 6. Indice a trigrammi: wildcard e fuzzy
 
@@ -114,7 +114,7 @@ A blocchi di 8 termini ordinati il primo è intero e gli altri sono (lunghezza d
 | Postings (4 byte per docId) | 50588 byte | 16876 byte | 33% |
 | Dizionario (UTF-8 + 1 byte di lunghezza per termine) | 22947 byte | 19400 byte | 85% |
 
-I postings guadagnano molto; il dizionario poco, perché è fatto soprattutto di codici e modelli che condividono pochi prefissi. Basi di confronto e dimensione del blocco sono scelte mie; non ho misurato il costo della decodifica.
+I postings guadagnano molto; il dizionario poco, perché è fatto soprattutto di codici e modelli che condividono pochi prefissi. Basi di confronto e dimensione del blocco sono scelte arbitrarie; il costo della decodifica non è stato misurato.
 
 ### 7.3 Persistenza dell'indice
 
@@ -125,7 +125,7 @@ Per impostazione predefinita l'indice **non è persistente**: `ir.Cli` e `ir.Web
 | A freddo (JVM nuova, 3 prove) | 90-102 ms | 60-75 ms |
 | A caldo (mediana di 20) | 17,0 ms | 5,8 ms |
 
-`indice.bin` pesa 148810 byte, più di `corpus.tsv` (111770): contiene anche i testi non compressi (circa metà del file), frequenze e lunghezze. Il vantaggio di tempo è piccolo su 1067 documenti (la JVM e i trigrammi costano uguale nei due casi) e non so come cresca su corpora più grandi. Non ho misurato il tempo delle interrogazioni su un indice da file, dove i postings si decodificano a ogni ricerca.
+`indice.bin` pesa 148810 byte, più di `corpus.tsv` (111770): contiene anche i testi non compressi (circa metà del file), frequenze e lunghezze. Il vantaggio di tempo è piccolo su 1067 documenti (la JVM e i trigrammi costano uguale nei due casi) e non è noto come cresca su corpora più grandi. Il tempo delle interrogazioni su un indice da file, dove i postings si decodificano a ogni ricerca, non è stato misurato.
 
 ## 8. Ranking: TF-IDF e BM25
 
@@ -149,7 +149,7 @@ con $k_1=1{,}2$, $b=0{,}75$ (valori usuali, fissati a priori, **non ottimizzati*
 
 Esempi reali (df errato → df corretto): `166b`→`16gb` (1→4), `32l7`→`32lt` (1→4), `s5p69k`→`55p69k` (1→4), `s0mp`→`50mp` (2→24), `sdcz600326b35`→`sdcz60032gb35` (1→2).
 
-**Valutazione.** La verità di riferimento viene dal corpus stesso (per righe con lo stesso codice e descrizione di pari lunghezza, la lettura più frequente è quella giusta): è una stima, non un'annotazione manuale. Il correttore propone 22 correzioni su 3046 termini: **11 confermate**, 1 contraddetta (`gliv → 6liv`: con ogni probabilità sbaglia il riferimento, perché `6LIV` sta per «6 livelli», ma non posso dimostrarlo), 10 non verificabili. Gli errori noti sono 50 e ne recupera 11; gli altri sono di altro tipo (cifre diverse, lettere cadute, `J` al posto di `I`) e non li tocca di proposito.
+**Valutazione.** La verità di riferimento viene dal corpus stesso (per righe con lo stesso codice e descrizione di pari lunghezza, la lettura più frequente è quella giusta): è una stima, non un'annotazione manuale. Il correttore propone 22 correzioni su 3046 termini: **11 confermate**, 1 contraddetta (`gliv → 6liv`: con ogni probabilità sbaglia il riferimento, perché `6LIV` sta per «6 livelli», ma non è dimostrabile con i dati), 10 non verificabili. Gli errori noti sono 50 e ne recupera 11; gli altri sono di altro tipo (cifre diverse, lettere cadute, `J` al posto di `I`) e non li tocca di proposito.
 
 ## 10. Valutazione sperimentale
 
@@ -220,7 +220,7 @@ $$AP(q)=\frac{1}{|Rel|}\sum_{k=1}^{n}P@k\cdot r_k\qquad MAP=\frac{1}{|Q|}\sum_{q
 
 ### 10.5 fastText (libreria, solo confronto)
 
-`FastTextConfronto` addestra un modello skipgram con n-grammi di carattere (3-6) sul solo testo del corpus; ogni termine del dizionario ha un vettore (anche quelli mai visti, dai loro n-grammi) e una parola della query si espande nei termini a coseno più alto (al massimo 5 vicini con coseno ≥ 0,9). Ha il richiamo più alto (0,992) e la precisione più bassa (0,444): su 1067 righe i vettori discriminano poco e molti vicini non sono lo stesso prodotto (`8gb`/`6gb`). Parametri fissati a priori e **non ottimizzati sul benchmark**: una soglia più severa sposterebbe il compromesso verso la precisione, ma non l'ho provata per non tarare il confronto sul test. Non supporta le wildcard. L'addestramento usa un thread, ma i risultati non sono identici tra macchine (su Windows ho ottenuto P = 0,451 e R = 0,993); gli altri sistemi sono deterministici.
+`FastTextConfronto` addestra un modello skipgram con n-grammi di carattere (3-6) sul solo testo del corpus; ogni termine del dizionario ha un vettore (anche quelli mai visti, dai loro n-grammi) e una parola della query si espande nei termini a coseno più alto (al massimo 5 vicini con coseno ≥ 0,9). Ha il richiamo più alto (0,992) e la precisione più bassa (0,444): su 1067 righe i vettori discriminano poco e molti vicini non sono lo stesso prodotto (`8gb`/`6gb`). Parametri fissati a priori e **non ottimizzati sul benchmark**: una soglia più severa sposterebbe il compromesso verso la precisione, ma non è stata provata per non tarare il confronto sul test. Non supporta le wildcard. L'addestramento usa un thread, ma i risultati non sono identici tra macchine (su Windows si sono ottenuti P = 0,451 e R = 0,993); gli altri sistemi sono deterministici.
 
 ## 11. Interfaccia
 
@@ -233,7 +233,7 @@ $$AP(q)=\frac{1}{|Rel|}\sum_{k=1}^{n}P@k\cdot r_k\qquad MAP=\frac{1}{|Q|}\sum_{q
 - Un solo fornitore e un corpus piccolo (1067 righe): i numeri mostrano un comportamento, non una prestazione generale. La rilevanza è automatica (stesso codice) e il codice stesso può essere letto male, il che penalizza la precisione di ciò che corregge.
 - Gli errori OCR diversi dagli scambi confondibili non sono corretti; il fuzzy «solo se assente» non parte se l'errore è, per caso, un'altra parola valida.
 - La quantità resta in coda alla descrizione e non è un campo separato. 5 documenti hanno numero e data illeggibili e una pagina (`20260703100204858`) resta capovolta.
-- L'indice è persistente solo se salvato esplicitamente (`ir.Persistenza`), a sola lettura, con i trigrammi ricostruiti a ogni avvio e testi non compressi (§7.3). Ho misurato confronti fra docId, dimensioni e tempi di avvio, non i tempi delle interrogazioni.
+- L'indice è persistente solo se salvato esplicitamente (`ir.Persistenza`), a sola lettura, con i trigrammi ricostruiti a ogni avvio e testi non compressi (§7.3). Sono stati misurati confronti fra docId, dimensioni e tempi di avvio, non i tempi delle interrogazioni.
 - fastText usa un wrapper di terzi con libreria nativa (provata su Linux e Windows x86-64); altrove il test viene saltato e il benchmark non gira.
 
 ## 13. Riproduzione

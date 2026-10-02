@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Correzione OCR mirata sui termini del dizionario (mia).
+ * Correzione OCR mirata sui termini del dizionario.
  * Si correggono solo scambi fra caratteri che l'OCR confonde davvero (tabella CONFUSIONI, ricavata dai
  * dati: stesse righe articolo, cioe' stesso codice, lette in modo diverso in bolle diverse) e solo verso un
  * termine che esiste gia' nel dizionario con piu' documenti. Niente correzioni "a distanza di edit":
