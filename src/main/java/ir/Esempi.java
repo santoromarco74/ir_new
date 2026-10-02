@@ -102,6 +102,24 @@ public final class Esempi {
             System.out.printf("%s -> %s  df %d -> %d%n", e.getKey(), e.getValue(), base.postings(e.getKey()).size(), base.postings(e.getValue()).size());
         }
 
+        System.out.println("### ranking");
+        long somma = 0, voci = 0, ripetute = 0;
+        for (String t : base.terms()) for (int f : base.tf(t)) { somma += f; voci++; if (f > 1) ripetute++; }
+        System.out.printf("token totali=%d, coppie termine-documento=%d, di cui con tf>1: %d (%.1f%%)%n", somma, voci, ripetute, 100.0 * ripetute / voci);
+        for (String q : new String[]{"friggitrice aria", "lavatrice slim"}) {
+            Searcher se = new Searcher(base, Searcher.ModoFuzzy.NO);
+            List<String> termini = new ArrayList<>();
+            for (String w : q.split(" ")) termini.addAll(se.espandi(w));
+            System.out.println("query OR '" + q + "' (N=" + base.size() + ", lunghezza media=" + String.format("%.2f", base.lunghezzaMedia()) + ")");
+            for (String t : termini) System.out.println("  termine " + t + ": df=" + base.postings(t).size() + ", idf BM25=" + String.format("%.3f", Math.log(1 + (base.size() - base.postings(t).size() + 0.5) / (base.postings(t).size() + 0.5))) + ", idf TF-IDF=" + String.format("%.3f", Math.log((double) base.size() / base.postings(t).size())));
+            for (Ranker.Modello m : new Ranker.Modello[]{Ranker.Modello.TFIDF, Ranker.Modello.BM25}) {
+                Map<Integer, Double> pt = new Ranker(base).punteggi(termini, m);
+                List<Integer> ord = se.searchRanked(q, m, false);
+                System.out.println("  " + m + " (primi 5 di " + ord.size() + "):");
+                for (int id : ord.subList(0, Math.min(5, ord.size()))) System.out.printf("    %.3f  len=%d  %s%n", pt.get(id), base.lunghezza(id), base.doc(id));
+            }
+        }
+
         System.out.println("### casi di ricerca");
         caso("friggitrice aria", base);
         caso("lava*", base);

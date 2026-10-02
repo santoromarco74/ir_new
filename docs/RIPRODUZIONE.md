@@ -5,6 +5,7 @@ scripts/ocr.sh                                          # scansioni/ -> data/ocr
 mvn -q compile
 CP="target/classes:$(mvn -q dependency:build-classpath -Dmdep.outputFile=/dev/stdout)"   # classpath con le dipendenze (serve per Benchmark)
 java -cp target/classes ir.corpus.CorpusBuilder         # data/ocr -> data/corpus.tsv, data/righe_escluse.tsv
+java -cp target/classes ir.Cli "friggitrice aria" --bm25 --or   # ordine per punteggio (--tfidf, --bm25), --or = almeno una parola
 java -cp target/classes ir.Cli "lava*" --ocr            # prova da riga di comando
 java -cp target/classes ir.WebServer 8080               # interfaccia web su http://localhost:8080
 java -cp target/classes ir.Persistenza                  # salva l'indice compresso: data/indice.bin e data/indice_ocr.bin
@@ -31,6 +32,7 @@ Serve un JDK 17 o superiore a 64 bit (`java -version`); Maven non va installato,
 $CP = "target\classes;" + (Get-Content target\cp.txt)
 
 java -cp target\classes ir.corpus.CorpusBuilder      # data\ocr -> data\corpus.tsv, data\righe_escluse.tsv
+java -cp target\classes ir.Cli "friggitrice aria" --bm25 --or   # ordine per punteggio
 java -cp target\classes ir.Cli "lava*" --ocr          # prova da riga di comando
 java -cp target\classes ir.WebServer 8080             # interfaccia web su http://localhost:8080
 java -cp target\classes ir.Persistenza                 # salva data\indice.bin e data\indice_ocr.bin

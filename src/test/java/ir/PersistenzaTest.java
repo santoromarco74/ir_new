@@ -35,6 +35,25 @@ class PersistenzaTest {
         assertEquals(ix.terms(), c.terms());
         for (int d = 0; d < ix.size(); d++) assertEquals(ix.doc(d), c.doc(d));
         for (String t : ix.terms()) assertArrayEquals(ix.postings(t).toArray(), c.postings(t).toArray());
+        for (String t : ix.terms()) assertArrayEquals(ix.tf(t), c.tf(t), t);
+        for (int d = 0; d < ix.size(); d++) assertEquals(ix.lunghezza(d), c.lunghezza(d));
+        assertEquals(ix.lunghezzaMedia(), c.lunghezzaMedia(), 1e-9);
+    }
+
+    @Test
+    void ilRankingSuIndiceCaricatoDaFileEquivaleAQuelloInMemoria(@TempDir Path dir) throws IOException {
+        InvertedIndex ix = indice();
+        Path f = dir.resolve("indice.bin");
+        new CompressedIndex(ix).salva(f);
+        Indice c = CompressedIndex.carica(f);
+        for (Ranker.Modello m : Ranker.Modello.values()) {
+            for (boolean and : new boolean[]{true, false}) {
+                Searcher a = new Searcher(ix, Searcher.ModoFuzzy.FALLBACK), b = new Searcher(c, Searcher.ModoFuzzy.FALLBACK);
+                for (String q : List.of("lavatrice 7kg", "lava*", "friggitrici", "tv smart nero")) {
+                    assertEquals(a.searchRanked(q, m, and), b.searchRanked(q, m, and), q + " " + m + " " + and);
+                }
+            }
+        }
     }
 
     @Test

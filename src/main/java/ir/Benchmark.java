@@ -96,6 +96,30 @@ public final class Benchmark {
             }
         }
 
+        // ranking: stessa collezione, ma qui conta l'ORDINE dei risultati (MAP, P@1, R-precision)
+        Object[][] ordinamenti = {
+                {"AND, nessun punteggio (docId)", Searcher.ModoFuzzy.NO, Ranker.Modello.NESSUNO, true},
+                {"AND + TF-IDF", Searcher.ModoFuzzy.NO, Ranker.Modello.TFIDF, true},
+                {"AND + BM25", Searcher.ModoFuzzy.NO, Ranker.Modello.BM25, true},
+                {"OR, nessun punteggio (docId)", Searcher.ModoFuzzy.NO, Ranker.Modello.NESSUNO, false},
+                {"OR + TF-IDF", Searcher.ModoFuzzy.NO, Ranker.Modello.TFIDF, false},
+                {"OR + BM25", Searcher.ModoFuzzy.NO, Ranker.Modello.BM25, false},
+                {"fuzzy sempre, AND + TF-IDF", Searcher.ModoFuzzy.SEMPRE, Ranker.Modello.TFIDF, true},
+                {"fuzzy sempre, AND + BM25", Searcher.ModoFuzzy.SEMPRE, Ranker.Modello.BM25, true},
+        };
+        for (PrintStream o : new PrintStream[]{System.out, out}) {
+            o.println("\nranking (query esatte; ordine dei risultati)       set          MAP    P@1    R-prec");
+        }
+        for (Object[] r : ordinamenti) {
+            Searcher se = new Searcher(base, (Searcher.ModoFuzzy) r[1]);
+            Ranker.Modello m = (Ranker.Modello) r[2];
+            boolean and = (Boolean) r[3];
+            for (PrintStream o : new PrintStream[]{System.out, out}) {
+                rigaRanking(o, (String) r[0], "tutte", valutaRanking(q -> se.searchRanked(q, m, and), esatte, false));
+                rigaRanking(o, "", "con varianti", valutaRanking(q -> se.searchRanked(q, m, and), esatte, true));
+            }
+        }
+
         // efficienza delle skip list: confronti fra docId, AND di (modello, parola) sulle query esatte
         long[] cSkip = {0}, cLin = {0};
         for (Query q : esatte) {
@@ -141,5 +165,33 @@ public final class Benchmark {
 
     static void riga(PrintStream o, String nome, String set, double[] m) {
         o.printf("%-31s %-12s %.3f  %.3f  %.3f  %.4f  (n=%d)%n", nome, set, m[0], m[1], m[2], m[3], (int) m[4]);
+    }
+
+    /** MAP, P@1 e R-precision (precisione alla posizione |Rel|) sulla lista ordinata dei risultati. */
+    static double[] valutaRanking(Function<String, List<Integer>> ricerca, List<Query> qs, boolean soloVarianti) {
+        double ap = 0, p1 = 0, rp = 0;
+        int n = 0;
+        for (Query q : qs) {
+            if (soloVarianti && !q.conVarianti()) continue;
+            List<Integer> lista = ricerca.apply(q.testo());
+            int trovati = 0, trovatiInTopR = 0;
+            double somma = 0;
+            for (int k = 0; k < lista.size(); k++) {
+                if (q.rilevanti().contains(lista.get(k))) {
+                    trovati++;
+                    somma += (double) trovati / (k + 1);
+                    if (k < q.rilevanti().size()) trovatiInTopR++;
+                }
+            }
+            rp += (double) trovatiInTopR / q.rilevanti().size(); // R-precision: rilevanti fra i primi |Rel|, diviso |Rel|
+            ap += somma / q.rilevanti().size();
+            if (!lista.isEmpty() && q.rilevanti().contains(lista.get(0))) p1 += 1;
+            n++;
+        }
+        return new double[]{ap / n, p1 / n, rp / n, n};
+    }
+
+    static void rigaRanking(PrintStream o, String nome, String set, double[] m) {
+        o.printf("%-45s %-12s %.3f  %.3f  %.3f  (n=%d)%n", nome, set, m[0], m[1], m[2], (int) m[3]);
     }
 }

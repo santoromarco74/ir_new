@@ -11,7 +11,7 @@ Nella stesura del presente progetto («Archivio Bolle», complemento all'esame d
 - **Strumento utilizzato**: Claude (Anthropic), usato tramite Claude Code, assistente di programmazione, in sessioni di lavoro su ambiente cloud. Versione del modello: [da indicare, se richiesta].
 
 - **Perimetro di applicazione**:
-  - il codice Java del sistema (parser del testo OCR, indice invertito, skip list, indice a trigrammi con ricerca wildcard e fuzzy, compressione, persistenza dell'indice, correzione OCR, benchmark, interfaccia web) e i relativi test automatici; gli script di supporto (OCR, grafici) e la configurazione di Maven;
+  - il codice Java del sistema (parser del testo OCR, indice invertito, skip list, indice a trigrammi con ricerca wildcard e fuzzy, compressione, persistenza dell'indice, correzione OCR, ranking TF-IDF e BM25, benchmark, interfaccia web) e i relativi test automatici; gli script di supporto (OCR, grafici) e la configurazione di Maven;
   - la bozza della relazione (testo, tabelle, formule ed esempi ricavati dall'esecuzione del codice) e della documentazione (README, istruzioni di riproduzione);
   - l'esecuzione dei programmi di misura (benchmark e valutazioni) e la correzione degli errori emersi.
 

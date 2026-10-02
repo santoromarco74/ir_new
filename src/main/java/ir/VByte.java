@@ -40,4 +40,19 @@ public final class VByte {
         while (pos[0] < b.length) { prec += leggi(b, pos); tmp[n++] = prec; }
         return java.util.Arrays.copyOf(tmp, n);
     }
+
+    /** Sequenza di interi non negativi (non gap), per frequenze e lunghezze. */
+    public static byte[] codificaInteri(int[] valori) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (int v : valori) scrivi(out, v);
+        return out.toByteArray();
+    }
+
+    public static int[] decodificaInteri(byte[] b) {
+        int[] tmp = new int[b.length];
+        int n = 0;
+        int[] pos = {0};
+        while (pos[0] < b.length) tmp[n++] = leggi(b, pos);
+        return java.util.Arrays.copyOf(tmp, n);
+    }
 }

@@ -14,19 +14,23 @@ import java.util.List;
 
 /**
  * Versione compressa e a sola lettura di un InvertedIndex (mia): dizionario con front coding,
- * postings come gap + VByte in un unico array. {@link #postings} decodifica al volo e restituisce una PostingList.
+ * postings come gap + VByte in un unico array, frequenze dei termini (tf) come VByte, lunghezze dei documenti. {@link #postings} decodifica al volo e restituisce una PostingList.
  * Si puo' salvare su file e ricaricare ({@link #salva}, {@link #carica}): e' l'indice persistente del sistema.
  * Nel file ci sono anche i testi dei documenti (non compressi), per poter mostrare i risultati.
  * L'indice a trigrammi non e' salvato: lo ricostruisce il Searcher dai termini a ogni avvio.
  */
 public final class CompressedIndex implements Indice {
     private static final int MAGIC = 0x49524958; // "IRIX"
-    private static final int VERSIONE = 1;
+    private static final int VERSIONE = 2;
 
     private final FrontCodedDictionary dizionario;
     private final byte[] postings;
     private final int[] offset; // offset[id]..offset[id+1] = postings del termine id
     private final List<String> docs;
+    private final byte[] frequenze;   // tf di tutti i postings, VByte, nello stesso ordine di `postings`
+    private final int[] offsetTf;     // offsetTf[id]..offsetTf[id+1] = tf del termine id
+    private final int[] lunghezze;    // token per documento
+    private final double lunghezzaMedia;
 
     private final long byteDizionarioNonCompresso;
     private final long byteNonCompressi;
@@ -35,28 +39,46 @@ public final class CompressedIndex implements Indice {
         List<String> termini = ix.terms();
         dizionario = new FrontCodedDictionary(termini);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream outTf = new ByteArrayOutputStream();
         offset = new int[termini.size() + 1];
+        offsetTf = new int[termini.size() + 1];
         long raw = 0, rawDiz = 0;
         for (int i = 0; i < termini.size(); i++) {
             offset[i] = out.size();
+            offsetTf[i] = outTf.size();
             int[] p = ix.postings(termini.get(i)).toArray();
             out.writeBytes(VByte.codificaPostings(p));
+            outTf.writeBytes(VByte.codificaInteri(ix.tf(termini.get(i))));
             raw += 4L * p.length;
             rawDiz += 1 + termini.get(i).getBytes(StandardCharsets.UTF_8).length;
         }
         offset[termini.size()] = out.size();
+        offsetTf[termini.size()] = outTf.size();
         postings = out.toByteArray();
+        frequenze = outTf.toByteArray();
         byteNonCompressi = raw;
         byteDizionarioNonCompresso = rawDiz;
         docs = new ArrayList<>(ix.size());
-        for (int d = 0; d < ix.size(); d++) docs.add(ix.doc(d));
+        lunghezze = new int[ix.size()];
+        for (int d = 0; d < ix.size(); d++) {
+            docs.add(ix.doc(d));
+            lunghezze[d] = ix.lunghezza(d);
+        }
+        lunghezzaMedia = ix.lunghezzaMedia();
     }
 
-    private CompressedIndex(FrontCodedDictionary dizionario, byte[] postings, int[] offset, List<String> docs) {
+    private CompressedIndex(FrontCodedDictionary dizionario, byte[] postings, int[] offset, List<String> docs,
+                            byte[] frequenze, int[] offsetTf, int[] lunghezze) {
         this.dizionario = dizionario;
         this.postings = postings;
         this.offset = offset;
         this.docs = docs;
+        this.frequenze = frequenze;
+        this.offsetTf = offsetTf;
+        this.lunghezze = lunghezze;
+        long somma = 0;
+        for (int l : lunghezze) somma += l;
+        this.lunghezzaMedia = lunghezze.length == 0 ? 0 : (double) somma / lunghezze.length;
         this.byteDizionarioNonCompresso = 0;
         this.byteNonCompressi = 0;
     }
@@ -72,6 +94,10 @@ public final class CompressedIndex implements Indice {
             out.write(postings);
             out.writeInt(offset.length);
             for (int o : offset) out.writeInt(o);
+            out.writeInt(frequenze.length);
+            out.write(frequenze);
+            for (int o : offsetTf) out.writeInt(o);
+            for (int l : lunghezze) out.writeInt(l);
         }
     }
 
@@ -86,7 +112,13 @@ public final class CompressedIndex implements Indice {
             in.readFully(post);
             int[] off = new int[in.readInt()];
             for (int i = 0; i < off.length; i++) off[i] = in.readInt();
-            return new CompressedIndex(d, post, off, docs);
+            byte[] tf = new byte[in.readInt()];
+            in.readFully(tf);
+            int[] offTf = new int[off.length];
+            for (int i = 0; i < offTf.length; i++) offTf[i] = in.readInt();
+            int[] len = new int[docs.size()];
+            for (int i = 0; i < len.length; i++) len[i] = in.readInt();
+            return new CompressedIndex(d, post, off, docs, tf, offTf, len);
         }
     }
 
@@ -108,6 +140,19 @@ public final class CompressedIndex implements Indice {
         if (id < 0) return PostingList.VUOTA;
         return new PostingList(VByte.decodificaPostings(java.util.Arrays.copyOfRange(postings, offset[id], offset[id + 1])));
     }
+
+    @Override
+    public int[] tf(String termine) {
+        int id = dizionario.id(termine);
+        if (id < 0) return new int[0];
+        return VByte.decodificaInteri(java.util.Arrays.copyOfRange(frequenze, offsetTf[id], offsetTf[id + 1]));
+    }
+
+    @Override
+    public int lunghezza(int docId) { return lunghezze[docId]; }
+
+    @Override
+    public double lunghezzaMedia() { return lunghezzaMedia; }
 
     public long dizionarioCompresso() { return dizionario.byteOccupati(); }
     /** Dizionario non compresso: byte UTF-8 dei termini + 1 byte di lunghezza ciascuno (0 se l'indice e' stato caricato da file). */

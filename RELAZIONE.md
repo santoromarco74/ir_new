@@ -2,7 +2,7 @@
 
 Complemento all'esame di Information Retrieval (laurea magistrale in Computer Engineering, Università di Pavia).
 
-Tutti i numeri e gli esempi riportati sono prodotti dal codice del repository: `ir.Benchmark` (`data/risultati_benchmark.txt`), `ir.Esempi`, `ir.Compressione`, `ir.ValutaCorrezione`. I comandi per riprodurli sono al §12.
+Tutti i numeri e gli esempi riportati sono prodotti dal codice del repository: `ir.Benchmark` (`data/risultati_benchmark.txt`), `ir.Esempi`, `ir.Compressione`, `ir.ValutaCorrezione`. I comandi per riprodurli sono al §13.
 
 ## 1. Obiettivo
 
@@ -12,7 +12,7 @@ Un sistema che cerca **articoli su bolle di trasporto (DDT) scansionate**. Una b
 - punteggiatura e lettere sparse (`GBBSJ21DEP_`, `i`, `|` in mezzo alla riga);
 - pagine capovolte, che senza correzione producono testo illeggibile.
 
-Un utente che cerca il codice o il modello corretto non trova le righe in cui l'OCR lo ha letto male. Il lavoro è concentrato sulle **strutture dati e sugli algoritmi di indicizzazione e recupero**, che ho realizzato con il supporto di un assistente IA (dichiarazione al §13), e sul modo in cui reagiscono al rumore. Il benchmark (§9) è un complemento che misura se le scelte servono; non è il centro del lavoro.
+Un utente che cerca il codice o il modello corretto non trova le righe in cui l'OCR lo ha letto male. Il lavoro è concentrato sulle **strutture dati e sugli algoritmi di indicizzazione e recupero**, che ho realizzato con il supporto di un assistente IA (dichiarazione al §14), e sul modo in cui reagiscono al rumore. Il benchmark (§10) è un complemento che misura se le scelte servono; non è il centro del lavoro.
 
 ## 2. Architettura e confine «mio / libreria»
 
@@ -27,13 +27,14 @@ data/ocr/*.txt  ──►  OcrParser + CorpusBuilder  [mio]  ──►  data/cor
                                     │                         ▲
                                     ▼                         │ intersezione / unione
                               KGramIndex (trigrammi) ── wildcard, fuzzy ──► Searcher ──► Cli / WebServer
+                                                         Ranker (TF-IDF, BM25) ──┘
                                     ▲                         ▲
                            OcrCorrector (riscrive i termini)  │
                                                               │
                  CompressedIndex (VByte + front coding) ⇄ data/indice.bin   └── Benchmark (confronta anche fastText: libreria)
 ```
 
-«Mio» indica ciò che non viene da librerie di terzi e che è stato realizzato nell'ambito del progetto; il supporto dell'assistente IA nella realizzazione è dichiarato al §13.
+«Mio» indica ciò che non viene da librerie di terzi e che è stato realizzato nell'ambito del progetto; il supporto dell'assistente IA nella realizzazione è dichiarato al §14.
 
 | Componente | File | Mio / libreria |
 |---|---|---|
@@ -47,12 +48,13 @@ data/ocr/*.txt  ──►  OcrParser + CorpusBuilder  [mio]  ──►  data/cor
 | Compressione: gap + variable byte, front coding | `VByte`, `FrontCodedDictionary`, `CompressedIndex` | **Mio** |
 | Indice persistente: salvataggio e caricamento da file | `CompressedIndex.salva/carica`, `Persistenza`, `Indice` | **Mio** (solo `java.io` della JDK) |
 | Correzione OCR mirata | `OcrCorrector` | **Mio** |
+| Ranking: TF-IDF (lnc.ltn) e BM25 sulle frequenze dei termini | `Ranker`, `Searcher.searchRanked` | **Mio** |
 | Motore di ricerca che compone le parti | `Searcher` | **Mio** |
 | Interfaccia web minimale | `WebServer` | **Mio**, sopra il server HTTP della JDK (`com.sun.net.httpserver`); nessun framework |
 | Test collection e metriche; esempi della relazione | `Benchmark`, `Esempi` | **Mio** |
 | Grafici SVG della relazione | `scripts/grafici.py` | **Mio**, Python con sola libreria standard (strumento di contorno) |
 | Test automatici | `src/test` | JUnit 5 (libreria, solo per i test) |
-| fastText (modello di confronto) | `FastTextConfronto` | **LIBRERIA di terzi**: fastText (Facebook) tramite il wrapper Java JFastText (`com.github.vinhkhuc:jfasttext` 0.5, JNI con libreria nativa inclusa, dipendenza `org.bytedeco:javacpp`). Addestramento e vettori sono della libreria; mio è solo l'uso come espansione dei termini (§9.7) |
+| fastText (modello di confronto) | `FastTextConfronto` | **LIBRERIA di terzi**: fastText (Facebook) tramite il wrapper Java JFastText (`com.github.vinhkhuc:jfasttext` 0.5, JNI con libreria nativa inclusa, dipendenza `org.bytedeco:javacpp`). Addestramento e vettori sono della libreria; mio è solo l'uso come espansione dei termini (§10.8) |
 
 Nessuna libreria di indicizzazione (Lucene, SQLite FTS5 o simili) è usata nel sistema: tutti gli indici sono strutture scritte da me, tenute in memoria durante la ricerca; non c'è un database. L'indice può essere salvato su un file e ricaricato (§7.3). L'unica libreria di terzi che entra nel codice di ricerca è fastText, e solo come termine di confronto nel benchmark: non è usata da `Searcher`, dalla riga di comando né dall'interfaccia web.
 
@@ -76,7 +78,7 @@ Esempio reale, dal testo OCR di `20260126082729876`:
 | Riga OCR grezza | Risultato |
 |---|---|
 | `DESTINATARI. DS UNGINZO 003382 Pg 1/1 21/01/2026 Vendita` | numero `003382`, data `21/01/2026` |
-| `939588 LGE S5UR781C0LK TV LED 55"UHD 4K DVBT2/S2 SMART WEBOS 6` | riga articolo: codice `939588`, descrizione `LGE S5UR781C0LK TV LED 55"UHD 4K DVBT2/S2 SMART WEBOS 6` (l'OCR ha letto `S5UR…` invece di `55UR…`: il parser non corregge, è compito del §8) |
+| `939588 LGE S5UR781C0LK TV LED 55"UHD 4K DVBT2/S2 SMART WEBOS 6` | riga articolo: codice `939588`, descrizione `LGE S5UR781C0LK TV LED 55"UHD 4K DVBT2/S2 SMART WEBOS 6` (l'OCR ha letto `S5UR…` invece di `55UR…`: il parser non corregge, è compito del §9) |
 | `001519 - 078 LUOGO DI DESTINAZIONE` | esclusa, motivo `luogo_destinazione` |
 | `20025 LEGNANO CORSO RICCI, 211R` | esclusa, motivo `indirizzo` |
 | `Rif. citato in fatt. VEND 000906 del 21/01/2026` | esclusa, motivo `riferimento_fattura_ordine` |
@@ -246,26 +248,58 @@ I postings guadagnano molto. Il dizionario poco, perché in gran parte è fatto 
 
 Per impostazione predefinita l'indice **non è persistente**: ogni avvio di `ir.Cli` o `ir.WebServer` rilegge `data/corpus.tsv` e lo ricostruisce in memoria (tokenizzazione, indice invertito, e per la correzione OCR anche il calcolo delle correzioni). Per evitarlo, `ir.Persistenza` costruisce l'indice, lo comprime e lo salva su file; `--file` lo ricarica invece di ricostruirlo.
 
-Il file (`data/indice.bin`, e `data/indice_ocr.bin` per l'indice con correzione OCR) contiene, nell'ordine: un'intestazione (numero magico e versione, controllati al caricamento), i testi dei documenti, il dizionario con front coding e i postings con gap e VByte, più gli offset che servono per trovarli. **L'indice a trigrammi non è salvato**: il `Searcher` lo ricostruisce dai termini a ogni avvio, sia che l'indice arrivi dal corpus sia che arrivi dal file. Il formato e la lettura usano solo le classi `java.io` della JDK.
+Il file (`data/indice.bin`, e `data/indice_ocr.bin` per l'indice con correzione OCR) contiene, nell'ordine: un'intestazione (numero magico e versione, controllati al caricamento), i testi dei documenti, il dizionario con front coding, i postings con gap e VByte, le frequenze dei termini (VByte) e le lunghezze dei documenti per il ranking, più gli offset che servono per trovarli. **L'indice a trigrammi non è salvato**: il `Searcher` lo ricostruisce dai termini a ogni avvio, sia che l'indice arrivi dal corpus sia che arrivi dal file. Il formato e la lettura usano solo le classi `java.io` della JDK.
 
-I test verificano tre cose: dopo il salvataggio e il ricaricamento termini, postings e testi sono identici; la ricerca (esatta, wildcard, fuzzy in tutte le modalità) dà gli stessi risultati sull'indice ricaricato e su quello in memoria; un file che non è un indice viene rifiutato.
+I test verificano quattro cose: dopo il salvataggio e il ricaricamento termini, postings, testi, frequenze e lunghezze sono identici; la ricerca (esatta, wildcard, fuzzy in tutte le modalità) e il ranking (TF-IDF, BM25, AND e OR) danno gli stessi risultati sull'indice ricaricato e su quello in memoria; un file che non è un indice viene rifiutato.
 
 Tempo per essere pronti a cercare, cioè indice più indice a trigrammi (macchina di sviluppo, tre esecuzioni con JVM nuova per la misura a freddo, venti ripetizioni per quella a caldo):
 
 | | Ricostruzione da `corpus.tsv` | Caricamento da file |
 |---|---|---|
-| A freddo (JVM nuova, 1 ripetizione) | 82-94 ms | 60-65 ms |
-| A caldo (mediana di 20 ripetizioni) | 13,5 ms | 8,3 ms |
+| A freddo (JVM nuova, 1 ripetizione) | 90-102 ms | 60-75 ms |
+| A caldo (mediana di 20 ripetizioni) | 17,0 ms | 5,8 ms |
 
 | File | Dimensione |
 |---|---|
 | `data/corpus.tsv` | 111770 byte |
-| `data/indice.bin` | 119703 byte |
-| `data/indice_ocr.bin` | 119525 byte |
+| `data/indice.bin` | 148810 byte |
+| `data/indice_ocr.bin` | 148544 byte |
 
-**Lettura.** Il caricamento da file è più veloce, ma di poco (circa un terzo in meno a freddo): su 1067 documenti la costruzione è già rapida e una parte del tempo, avvio della JVM e costruzione dei trigrammi, è uguale nei due casi. Il file non è più piccolo del corpus perché contiene anche i testi dei documenti, non compressi (più di metà del file); la compressione riguarda solo dizionario e postings (§7.1, §7.2). Non ho verificato come il vantaggio cresca con corpora più grandi, dove la costruzione costa di più. I postings si decodificano a ogni ricerca; non ho misurato il costo in tempo delle interrogazioni su un indice caricato da file.
+**Lettura.** Il caricamento da file è più veloce, ma di poco (circa un terzo in meno a freddo): su 1067 documenti la costruzione è già rapida e una parte del tempo, avvio della JVM e costruzione dei trigrammi, è uguale nei due casi. Il file non è più piccolo del corpus perché contiene anche i testi dei documenti, non compressi (circa metà del file), e le frequenze e le lunghezze per il ranking; la compressione riguarda solo dizionario e postings (§7.1, §7.2). Non ho verificato come il vantaggio cresca con corpora più grandi, dove la costruzione costa di più. I postings si decodificano a ogni ricerca; non ho misurato il costo in tempo delle interrogazioni su un indice caricato da file.
 
-## 8. Correzione OCR mirata
+## 8. Ranking: TF-IDF e BM25
+
+Finora il risultato di una ricerca è un **insieme** (AND booleano) elencato per docId. Una ricerca che restituisce molti documenti ha bisogno di un **ordine**: i documenti con più probabilità di essere quelli giusti devono venire prima. Per questo l'indice conserva, oltre ai postings, la **frequenza** di ogni termine in ogni documento (nello stesso ordine dei postings) e la **lunghezza** di ogni documento in token; `InvertedIndex` le calcola mentre indicizza, `CompressedIndex` le salva in VByte (§7.3).
+
+Notazione: $N$ è il numero di documenti (1067), $df_t$ il numero di documenti che contengono il termine $t$, $tf_{t,d}$ le occorrenze di $t$ in $d$, $|d|$ la lunghezza di $d$ e $avgdl$ la lunghezza media (12,00 token). L'**idf** pesa di più i termini rari: un termine che compare in pochi documenti distingue meglio.
+
+**TF-IDF** (schema SMART *lnc.ltn*, cap. 6 di Manning, Raghavan, Schütze): il peso del termine nel documento è $1+\ln tf$ (la frequenza cresce in modo sublineare), normalizzato con la lunghezza euclidea del vettore del documento; il peso nella query è l'idf.
+
+$$s_{\text{TF-IDF}}(d,q)=\sum_{t\in q}\frac{1+\ln tf_{t,d}}{\lVert d\rVert}\cdot\ln\frac{N}{df_t},\qquad \lVert d\rVert=\sqrt{\sum_{t\in d}\big(1+\ln tf_{t,d}\big)^2}$$
+
+**BM25** (Robertson), con idf non negativo: la frequenza del termine *satura* (il secondo fattore tende a $k_1+1$) e il punteggio è corretto per la lunghezza del documento, che penalizza i documenti più lunghi della media.
+
+$$s_{\text{BM25}}(d,q)=\sum_{t\in q}\ln\!\Big(1+\frac{N-df_t+0{,}5}{df_t+0{,}5}\Big)\cdot\frac{tf_{t,d}\,(k_1+1)}{tf_{t,d}+k_1\Big(1-b+b\,\dfrac{|d|}{avgdl}\Big)}$$
+
+con $k_1=1{,}2$ e $b=0{,}75$, i valori usati di solito, fissati a priori e **non ottimizzati sul benchmark**. Una parola della query che si espande in più termini (wildcard, fuzzy) contribuisce con la somma dei punteggi dei termini espansi.
+
+`Searcher.searchRanked` offre due modalità: **AND** (solo i documenti che contengono tutte le parole; il punteggio decide solo l'ordine) e **OR** (tutti i documenti che contengono almeno una parola; il punteggio decide anche quali documenti vengono in cima).
+
+**Esempio svolto.** Query `friggitrice aria` in OR. I due termini hanno $df=12$ e $df=14$: idf BM25 4,448 e 4,299. Il documento `892772 ARIE 4626BIANCO FRIGGITRICE AD ARIA 1300W 6LT BIANCO 2` contiene entrambi i termini una volta e ha $|d|=10$, più corto della media; ogni termine vale
+
+$$\frac{1\cdot 2{,}2}{1+1{,}2\,(1-0{,}75+0{,}75\cdot 10/12)}=\frac{2{,}2}{2{,}05}=1{,}073\quad\Rightarrow\quad s=(4{,}448+4{,}299)\cdot 1{,}073=9{,}387$$
+
+Gli altri documenti in cima hanno $|d|=11$ e fattore 1,035, quindi $s=9{,}056$. Il documento più corto passa avanti anche con le stesse frequenze: è l'effetto della normalizzazione per lunghezza. Con TF-IDF il primo documento ha 2,790 e gli altri 2,660, nello stesso ordine.
+
+| Posizione | BM25 | TF-IDF | Lunghezza | Riga |
+|---|---|---|---|---|
+| 1 | 9,387 | 2,790 | 10 | `892772 ARIE 4626BIANCO FRIGGITRICE AD ARIA 1300W 6LT BIANCO 2` |
+| 2 | 9,056 | 2,660 | 11 | `898169 CECO 4984 FRIGGITRICE AD ARIA 8LT CECOFRY SUPREME 8000 4` |
+| 3 | 9,056 | 2,660 | 11 | `948768 NUTR NBA0611DG FRIGGITRICE AD ARIA 1700W 6LT CRISPLITE NERO 6` |
+
+Un secondo esempio mostra l'idf. Per `lavatrice slim` il termine `lavatrice` compare in un solo documento (idf BM25 6,568) e `slim` in 28 (3,624): la riga `921711 MELI 656131. KIT CONGIUNZIONE LAVATRICE/ASCIUG. TORRE UP 2`, che contiene solo il termine raro, ha punteggio 7,049 e viene prima delle righe che contengono solo `slim` (3,6 circa), anche se queste sono 28.
+
+## 9. Correzione OCR mirata
 
 `OcrCorrector` lavora sui **termini del dizionario** e riscrive nell'indice i termini probabilmente errati. Per ogni termine $t$:
 
@@ -301,9 +335,9 @@ Correzioni reali (df = numero di documenti):
 
 Gli errori noti, cioè i token letti diversamente da quelli di riferimento, sono 50; il correttore ne recupera 11. Gli altri sono di altro tipo (cifre diverse, lettere cadute, `J` al posto di `I`) e il correttore non li tocca di proposito.
 
-## 9. Valutazione sperimentale
+## 10. Valutazione sperimentale
 
-### 9.1 Test collection
+### 10.1 Test collection
 
 È una **ricerca dell'articolo noto**. Per ogni codice articolo presente in almeno due righe (214 codici) si costruiscono due query a partire dalla lettura più frequente della descrizione:
 
@@ -312,7 +346,7 @@ Gli errori noti, cioè i token letti diversamente da quelli di riferimento, sono
 
 I documenti **rilevanti** sono tutte le righe con quel codice, comprese quelle in cui l'OCR ha letto male modello o parola. Il giudizio di rilevanza è quindi **automatico**, non manuale. In 65 query almeno una riga rilevante contiene modello o parola letti diversamente dalla lettura più frequente: è il sottoinsieme in cui si vede l'effetto dell'OCR e viene riportato a parte («con varianti»).
 
-### 9.2 Metriche
+### 10.2 Metriche
 
 Per una query, sia $Rel$ l'insieme dei documenti rilevanti e $Ret$ quello dei documenti restituiti, su $N=1067$ documenti:
 
@@ -325,7 +359,7 @@ $$P=\frac{TP}{TP+FP}\qquad R=\frac{TP}{TP+FN}\qquad F_1=\frac{2PR}{P+R}\qquad \t
 
 In parole:
 
-- **Precisione ($P$)**: tra i documenti che il sistema restituisce, la frazione che è giusta. Misura quanto è «pulito» il risultato: scende quando compaiono righe di altri prodotti (falsi positivi, come nel caso 2 del §9.6).
+- **Precisione ($P$)**: tra i documenti che il sistema restituisce, la frazione che è giusta. Misura quanto è «pulito» il risultato: scende quando compaiono righe di altri prodotti (falsi positivi, come nel caso 2 del §10.6).
 - **Richiamo ($R$)**: tra i documenti giusti, la frazione che il sistema ritrova. Misura quanto è «completo» il risultato: scende quando righe giuste non vengono trovate, per esempio perché l'OCR ha letto male il modello (falsi negativi, come nel caso 1).
 - **F1**: media armonica di precisione e richiamo. È alta solo se lo sono entrambe: un sistema che restituisce quasi tutto il corpus ha richiamo vicino a 1 ma precisione bassa, e F1 resta bassa; un sistema molto prudente ha il problema opposto.
 - **Accuratezza (acc)**: frazione di documenti classificati correttamente su tutti i 1067, cioè restituiti se rilevanti e non restituiti se non rilevanti.
@@ -336,11 +370,11 @@ Se una query non restituisce nulla si pone $P=0$. I valori delle tabelle sono la
 
 $$P=\frac{2}{2}=1{,}000\qquad R=\frac{2}{3}=0{,}667\qquad F_1=\frac{2\cdot 1\cdot 0{,}667}{1+0{,}667}=0{,}800\qquad \text{acc}=\frac{1067-0-1}{1067}=0{,}99906$$
 
-### 9.3 Sistemi confrontati
+### 10.3 Sistemi confrontati
 
 *esatta* (solo i termini della query), *fuzzy solo se assente* e *fuzzy sempre* (§6.3), *correzione OCR* (indice ricostruito con `OcrCorrector`, ricerca esatta), la combinazione dei due, e *fastText* come confronto con libreria (espansione dei termini con i vicini nello spazio di fastText).
 
-### 9.4 Risultati sulle query esatte
+### 10.4 Risultati sulle query esatte
 
 | Sistema | Set | P | R | F1 |
 |---|---|---|---|---|
@@ -362,11 +396,11 @@ $$P=\frac{2}{2}=1{,}000\qquad R=\frac{2}{3}=0{,}667\qquad F_1=\frac{2\cdot 1\cdo
 
 (I grafici arrotondano a due decimali; le tabelle riportano tre decimali. Il file di dati completo è `data/risultati_benchmark.txt`; i grafici si rigenerano con `python3 scripts/grafici.py`.)
 
-### 9.5 Risultati sulle query wildcard
+### 10.5 Risultati sulle query wildcard
 
 Sull'indice normale: P 0,860, R 0,890, F1 0,831 su tutte le query; P 0,897, R 0,638, F1 0,695 sulle 65 con varianti. Sull'indice con correzione OCR: P 0,850, R 0,890, F1 0,829 (tutte) e P 0,866, R 0,639, F1 0,688 (con varianti). La correzione non aiuta le wildcard.
 
-### 9.6 Casi di studio
+### 10.6 Casi di studio
 
 **Caso 1 — dove il fuzzy recupera.** Query `gbbsj21dep combi`, tre righe rilevanti (codice 972441):
 
@@ -392,7 +426,38 @@ Esatta e correzione OCR: P = R = F1 = 1,000. Fuzzy sempre: $TP=2$, $FP=2$, $FN=0
 
 **Caso 3 — wildcard.** Il pattern `sdcz5*` trova cinque termini, fra cui `sdcz500166b35`, che è `SDCZ50016GB35` letto con `6` al posto di `G`: il prefisso non è toccato dall'errore, quindi la ricerca con wildcard recupera una riga che la ricerca per termine intero non trova.
 
-### 9.7 Lettura dei risultati
+### 10.7 Risultati sul ranking
+
+Qui conta l'**ordine** dei risultati, quindi le metriche cambiano. Sia $r_k\in\{0,1\}$ la rilevanza del documento in posizione $k$ e $P@k$ la precisione sui primi $k$:
+
+$$AP(q)=\frac{1}{|Rel|}\sum_{k=1}^{n}P@k\cdot r_k\qquad MAP=\frac{1}{|Q|}\sum_{q\in Q}AP(q)$$
+
+**AP** (*average precision*) premia i sistemi che mettono i documenti giusti nelle prime posizioni; i documenti rilevanti non restituiti contribuiscono 0, quindi un richiamo basso abbassa la MAP. **MAP** è la media di AP sulle query. **P@1** è la frazione di query in cui il primo risultato è rilevante. **R-precision** è la frazione di rilevanti fra i primi $|Rel|$ risultati.
+
+| Sistema | Set | MAP | P@1 | R-precision |
+|---|---|---|---|---|
+| AND, nessun punteggio (docId) | tutte | 0,846 | 1,000 | 0,845 |
+| AND, nessun punteggio (docId) | con varianti | 0,496 | 1,000 | 0,496 |
+| AND + TF-IDF | tutte | 0,844 | 0,995 | 0,842 |
+| AND + BM25 | tutte | 0,844 | 0,995 | 0,842 |
+| AND + TF-IDF / BM25 | con varianti | 0,496 | 1,000 | 0,496 |
+| OR, nessun punteggio (docId) | tutte | 0,231 | 0,150 | 0,142 |
+| OR, nessun punteggio (docId) | con varianti | 0,186 | 0,077 | 0,107 |
+| OR + TF-IDF | tutte | 0,885 | 0,995 | 0,864 |
+| OR + BM25 | tutte | 0,885 | 0,995 | 0,864 |
+| OR + TF-IDF / BM25 | con varianti | 0,630 | 1,000 | 0,569 |
+| fuzzy sempre, AND + TF-IDF | tutte | 0,853 | 0,757 | 0,816 |
+| fuzzy sempre, AND + BM25 | tutte | 0,855 | 0,762 | 0,819 |
+| fuzzy sempre, AND + TF-IDF / BM25 | con varianti | 0,850 | 0,831 | 0,838 |
+
+<img src="docs/img/ranking.svg" alt="MAP per sistema" width="78%">
+
+- **AND: il punteggio cambia quasi nulla.** L'insieme restituito è già quasi tutto rilevante (P = 0,995, §10.4), quindi l'ordine conta poco; con il punteggio la MAP è anzi di pochissimo più bassa (0,844 contro 0,846) e P@1 passa da 1,000 a 0,995, cioè una query su 214 ha un documento non rilevante in testa. È una differenza troppo piccola per concludere che il punteggio peggiori il risultato.
+- **OR: il punteggio è indispensabile.** L'OR recupera più documenti, comprese le righe in cui l'OCR ha rovinato una delle due parole, ma senza punteggio (ordine per docId) la MAP è 0,231. Con TF-IDF o BM25 sale a 0,885 e P@1 a 0,995, e sulle 65 query con righe lette diversamente la MAP passa da 0,496 (AND) a 0,630 (OR + punteggio): le righe con una sola parola corretta vengono dopo quelle con entrambe, ma vengono trovate.
+- **TF-IDF e BM25 danno gli stessi valori**, salvo nel fuzzy (P@1 0,757 contro 0,762). Su questo corpus la spiegazione più ragionevole è che le descrizioni sono corte (12 token in media) e quasi tutti i termini compaiono una volta sola: solo 150 coppie termine-documento su 12647 (1,2%) hanno $tf>1$. Senza frequenze diverse e con lunghezze simili, a decidere l'ordine è l'idf, che i due modelli calcolano in modo quasi uguale. Non l'ho verificato con un corpus di testi più lunghi, dove i due modelli potrebbero separarsi.
+- **Fuzzy sempre: P@1 scende a 0,76.** Il fuzzy aggiunge termini vicini e il punteggio ne somma i contributi; una spiegazione plausibile, che non ho verificato, è che le varianti errate (rare, $df$ piccolo) hanno un idf più alto del termine corretto e quindi tendono a stare davanti.
+
+### 10.8 Lettura dei risultati
 
 - **Esatta.** Precisione quasi perfetta (0,995), richiamo 0,847; sulle 65 query con righe lette diversamente il richiamo cala a 0,496: trova solo metà delle righe giuste.
 - **Fuzzy «solo se assente».** Identico all'esatta: i termini delle query esistono sempre nel dizionario e il fuzzy non scatta. Serve per l'errore di battitura dell'utente, che questo benchmark non contiene.
@@ -400,18 +465,19 @@ Esatta e correzione OCR: P = R = F1 = 1,000. Fuzzy sempre: $TP=2$, $FP=2$, $FN=0
 - **Correzione OCR.** Richiamo quasi invariato (0,496 → 0,516 sulle 65) e precisione un po' più bassa (1,000 → 0,965). Quattro delle 22 correzioni non hanno nessuna riga con lo stesso codice a supporto (`1286b → 128gb`, `1p64 → ip64`, `arfoelo5 → arfoel05`, `spale → 5pale`); in due anche il codice è stato letto male, quindi una correzione plausibile può essere contata come errore dal giudizio automatico.
 - **fastText (libreria, confronto).** `FastTextConfronto` addestra un modello skipgram con n-grammi di carattere (3-6) sul solo testo del corpus. Ogni termine del dizionario ha un vettore (anche quelli mai visti, dai loro n-grammi) e una parola della query si espande nei termini a coseno più alto (al massimo 5 vicini con coseno ≥ 0,9); poi si usano gli stessi postings e la stessa intersezione. Richiamo più alto (0,992) e precisione più bassa (0,444): su 1067 righe i vettori discriminano poco e molti termini vicini non sono lo stesso prodotto (`8gb`/`6gb`). I parametri sono fissati a priori e **non ottimizzati sul benchmark**: una soglia più severa sposterebbe il compromesso verso la precisione, ma non l'ho provata per non tarare il confronto sul test. Non supporta le wildcard. L'addestramento usa un solo thread, ma i risultati non sono identici tra macchine: su Windows ho ottenuto P = 0,451 e R = 0,993. Gli altri sistemi sono deterministici e hanno dato gli stessi numeri.
 
-## 10. Interfaccia
+## 11. Interfaccia
 
 `WebServer` mostra una barra di ricerca e due opzioni, sopra lo stesso `Searcher`. Il server è quello della JDK, la pagina HTML è generata lato server, senza JavaScript né framework; il testo dei risultati e la query sono sottoposti a escape.
 
-Le opzioni sono la modalità fuzzy (no / solo se la parola non esiste / sempre) e l'uso dell'indice con correzione OCR. Il carattere `*` vale come jolly. `ir.Cli` offre la stessa ricerca da riga di comando (`--ocr`, `--no-fuzzy`). Sia `ir.Cli` sia `ir.WebServer` accettano `--file` per caricare l'indice persistente di §7.3 invece di ricostruirlo dal corpus.
+Le opzioni sono la modalità fuzzy (no / solo se la parola non esiste / sempre), l'uso dell'indice con correzione OCR, l'ordinamento (nessun punteggio / TF-IDF / BM25) e se la ricerca richiede tutte le parole o almeno una (OR). Il carattere `*` vale come jolly. `ir.Cli` offre la stessa ricerca da riga di comando (`--ocr`, `--no-fuzzy`, `--tfidf`, `--bm25`, `--or`). Sia `ir.Cli` sia `ir.WebServer` accettano `--file` per caricare l'indice persistente di §7.3 invece di ricostruirlo dal corpus.
 
-## 11. Discussione e limiti
+## 12. Discussione e limiti
 
 **Cosa mostrano i risultati.**
 
 - Sul tipo di errore che dominano i dati, la ricerca esatta è un riferimento difficile da battere in F1: i metodi che cercano di recuperare le righe lette male (fuzzy sempre, correzione OCR, fastText) cambiano soprattutto l'equilibrio fra precisione e richiamo.
 - Il fuzzy recupera errori che il correttore non conosce (`J/I`), ma costa falsi positivi su codici prodotto simili. La correzione OCR sbaglia meno ma recupera molto poco.
+- Il punteggio (TF-IDF o BM25) conta soprattutto quando la ricerca restituisce molti documenti: in OR porta la MAP da 0,231 a 0,885, in AND quasi non cambia nulla. Su questo corpus i due modelli sono indistinguibili (§10.7).
 - Gli skip riducono i confronti solo con liste di lunghezza molto diversa; la compressione dei postings riduce a un terzo, quella del dizionario poco.
 
 **Limiti.**
@@ -424,20 +490,21 @@ Le opzioni sono la modalità fuzzy (no / solo se la parola non esiste / sempre) 
 - 5 documenti hanno numero e data illeggibili e una pagina (`20260703100204858`) resta capovolta anche dopo il rilevamento di orientamento.
 - L'indice è persistente solo se lo si salva esplicitamente (`ir.Persistenza`): per impostazione predefinita viene ricostruito in memoria a ogni avvio. Anche con il file l'indice a trigrammi si ricostruisce a ogni avvio, i testi dei documenti sono salvati non compressi e il guadagno di tempo è piccolo su questo corpus (§7.3).
 - L'indice salvato è a sola lettura: aggiungere documenti richiede di ricostruirlo. I postings si decodificano a ogni ricerca; ho misurato i confronti fra docId, le dimensioni e i tempi di avvio, non i tempi delle interrogazioni né il costo della decodifica.
-- fastText è usato solo come confronto e con parametri non ottimizzati (§9.7). Il wrapper `jfasttext` è un pacchetto di terzi con libreria nativa inclusa (usata su Linux e Windows x86-64); su altre piattaforme il test corrispondente viene saltato e il benchmark non gira senza di essa.
+- fastText è usato solo come confronto e con parametri non ottimizzati (§10.8). Il wrapper `jfasttext` è un pacchetto di terzi con libreria nativa inclusa (usata su Linux e Windows x86-64); su altre piattaforme il test corrispondente viene saltato e il benchmark non gira senza di essa.
+- Del ranking ho provato solo TF-IDF (lnc.ltn) e BM25 con i parametri standard, senza ottimizzarli; la rilevanza è quella automatica per codice articolo e la collezione ha testi molto corti, quindi non dice quale dei due modelli sia migliore in generale. L'idf e il peso delle varianti nel fuzzy meriterebbero uno studio a parte (§10.7).
 
-## 12. Riproduzione
+## 13. Riproduzione
 
 I comandi per rigenerare corpus, esempi, grafici e benchmark (Linux/macOS e Windows PowerShell) sono in `docs/RIPRODUZIONE.md`.
 
-## 13. Dichiarazione sull'utilizzo di strumenti di Intelligenza Artificiale
+## 14. Dichiarazione sull'utilizzo di strumenti di Intelligenza Artificiale
 
 Nella stesura del presente progetto («Archivio Bolle», complemento all'esame di Information Retrieval) sono stati utilizzati i seguenti strumenti di Intelligenza Artificiale, come richiesto dalle Linee Guida per l'utilizzo dell'Intelligenza Artificiale dell'Università di Pavia (Delibera del Consiglio di Amministrazione n. 153/2026 del 22/05/2026):
 
 - **Strumento utilizzato**: Claude (Anthropic), usato tramite Claude Code, assistente di programmazione, in sessioni di lavoro su ambiente cloud. Versione del modello: [da indicare, se richiesta].
 
 - **Perimetro di applicazione**:
-  - il codice Java del sistema (parser del testo OCR, indice invertito, skip list, indice a trigrammi con ricerca wildcard e fuzzy, compressione, persistenza dell'indice, correzione OCR, benchmark, interfaccia web) e i relativi test automatici; gli script di supporto (OCR, grafici) e la configurazione di Maven;
+  - il codice Java del sistema (parser del testo OCR, indice invertito, skip list, indice a trigrammi con ricerca wildcard e fuzzy, compressione, persistenza dell'indice, correzione OCR, ranking TF-IDF e BM25, benchmark, interfaccia web) e i relativi test automatici; gli script di supporto (OCR, grafici) e la configurazione di Maven;
   - la bozza della relazione (testo, tabelle, formule ed esempi ricavati dall'esecuzione del codice) e della documentazione (README, istruzioni di riproduzione);
   - l'esecuzione dei programmi di misura (benchmark e valutazioni) e la correzione degli errori emersi.
 

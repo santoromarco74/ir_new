@@ -1,8 +1,11 @@
 package ir;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Ricerca sopra un Indice (InvertedIndex o CompressedIndex) + KGramIndex (tutto mio). Query = parole separate da spazio, in AND.
@@ -13,6 +16,7 @@ public final class Searcher {
     private final Indice index;
     private final KGramIndex kgrams;
     private final ModoFuzzy modo;
+    private final Ranker ranker;
 
     public enum ModoFuzzy { NO, FALLBACK, SEMPRE }
 
@@ -20,6 +24,7 @@ public final class Searcher {
         this.index = index;
         this.kgrams = new KGramIndex(index.terms(), 3);
         this.modo = modo;
+        this.ranker = new Ranker(index);
     }
 
     public Searcher(Indice index, boolean fuzzyFallback) {
@@ -51,5 +56,26 @@ public final class Searcher {
         PostingList u = PostingList.VUOTA;
         for (String t : espandi(parola)) u = PostingList.union(u, index.postings(t));
         return u;
+    }
+
+    /**
+     * Ricerca con ordinamento per punteggio (decrescente; a parita' docId crescente).
+     * @param and true = solo i documenti che contengono tutte le parole (come {@link #search});
+     *            false = tutti i documenti che contengono almeno una parola (OR), ordinati per punteggio.
+     */
+    public List<Integer> searchRanked(String query, Ranker.Modello modello, boolean and) {
+        List<String> parole = new ArrayList<>();
+        for (String p : query.toLowerCase(Locale.ITALIAN).trim().split("\\s+")) if (!p.isEmpty()) parole.add(p);
+        if (parole.isEmpty()) return List.of();
+        Set<String> espansi = new HashSet<>();
+        for (String p : parole) espansi.addAll(espandi(p));
+        Map<Integer, Double> punteggi = ranker.punteggi(espansi, modello);
+        Set<Integer> candidati = and ? new HashSet<>(search(query)) : punteggi.keySet();
+        List<Integer> out = new ArrayList<>(candidati);
+        out.sort((a, b) -> {
+            int c = Double.compare(punteggi.getOrDefault(b, 0.0), punteggi.getOrDefault(a, 0.0));
+            return c != 0 ? c : Integer.compare(a, b);
+        });
+        return out;
     }
 }
