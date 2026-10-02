@@ -9,10 +9,10 @@ import java.util.List;
 
 /**
  * MODELLO DI CONFRONTO CON LIBRERIA DI TERZI: fastText (Facebook) tramite il wrapper Java JFastText
- * (com.github.vinhkhuc:jfasttext, JNI con libreria nativa inclusa). NON e' un mio contributo:
+ * (com.github.vinhkhuc:jfasttext, JNI con libreria nativa inclusa). e' codice di terzi:
  * addestramento del modello e calcolo dei vettori sono della libreria.
  *
- * Mio, qui, e' solo l'uso come motore di espansione dei termini: si addestra un modello skipgram con n-grammi
+ * Il codice del progetto contiene solo l'uso come motore di espansione dei termini: si addestra un modello skipgram con n-grammi
  * di carattere (3-6) sul testo del corpus, ogni termine del dizionario ha un vettore (anche i termini mai visti
  * ne ricevono uno dai loro n-grammi), una parola della query si espande nei termini del dizionario a coseno piu'
  * alto, poi si usano gli stessi postings e la stessa intersezione del resto del sistema.

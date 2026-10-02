@@ -3,7 +3,7 @@ package ir;
 import java.util.Arrays;
 
 /**
- * Lista di postings (docId crescenti) con skip pointers, scritta da me.
+ * Lista di postings (docId crescenti) con skip pointers.
  * Passo degli skip = radice quadrata della lunghezza: dalla posizione i (multiplo del passo)
  * si puo' saltare a i + passo. Serve ad accelerare l'intersezione di una lista corta con una lunga.
  */

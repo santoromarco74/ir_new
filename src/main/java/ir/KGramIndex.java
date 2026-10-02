@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
- * Indice a k-grammi (trigrammi) sui TERMINI del dizionario, scritto da me.
+ * Indice a k-grammi (trigrammi) sui TERMINI del dizionario.
  * Ogni termine e' racchiuso fra '$' ("vite" -> $vi, vit, ite, te$); ogni k-gramma punta alla lista
  * ordinata degli id dei termini che lo contengono. Due usi:
  *  - wildcard: "vi*e" -> k-grammi dei pezzi fissi ($vi, te$) -> intersezione -> filtro sul pattern;

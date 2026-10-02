@@ -11,7 +11,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
-    <!-- LIBRERIA DI TERZI, solo come modello di confronto (vedi ir.FastTextConfronto): non e' un contributo mio -->
+    <!-- LIBRERIA DI TERZI, solo come modello di confronto (vedi ir.FastTextConfronto): codice di terzi -->
     <dependency>
       <groupId>com.github.vinhkhuc</groupId>
       <artifactId>jfasttext</artifactId>

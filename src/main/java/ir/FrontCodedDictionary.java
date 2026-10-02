@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Dizionario ordinato compresso con front coding a blocchi, scritto da me.
+ * Dizionario ordinato compresso con front coding a blocchi.
  * Termini a gruppi di BLOCCO: il primo e' scritto intero, gli altri come
  * (byte di prefisso in comune col precedente, byte di suffisso, suffisso). La ricerca fa una ricerca binaria
  * sulle teste dei blocchi e poi una scansione lineare dentro il blocco.

@@ -3,7 +3,7 @@ package ir;
 import java.io.ByteArrayOutputStream;
 
 /**
- * Codifica a lunghezza variabile (variable byte), scritta da me: 7 bit di dato per byte,
+ * Codifica a lunghezza variabile (variable byte): 7 bit di dato per byte,
  * il bit alto vale 1 sull'ultimo byte del numero. Usata per i gap dei postings e per le lunghezze del dizionario.
  */
 public final class VByte {

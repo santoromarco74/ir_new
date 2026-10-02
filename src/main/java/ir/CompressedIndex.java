@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Versione compressa e a sola lettura di un InvertedIndex (mia): dizionario con front coding,
+ * Versione compressa e a sola lettura di un InvertedIndex: dizionario con front coding,
  * postings come gap + VByte in un unico array, frequenze dei termini (tf) come VByte, lunghezze dei documenti. {@link #postings} decodifica al volo e restituisce una PostingList.
  * Si puo' salvare su file e ricaricare ({@link #salva}, {@link #carica}): e' l'indice persistente del sistema.
  * Nel file ci sono anche i testi dei documenti (non compressi), per poter mostrare i risultati.

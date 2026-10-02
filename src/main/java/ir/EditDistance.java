@@ -1,6 +1,6 @@
 package ir;
 
-/** Distanza di Levenshtein (programmazione dinamica a due righe), scritta da me. */
+/** Distanza di Levenshtein (programmazione dinamica a due righe). */
 public final class EditDistance {
     private EditDistance() {}
 

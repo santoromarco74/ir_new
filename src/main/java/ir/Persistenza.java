@@ -8,7 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Persistenza dell'indice (mia): costruisce l'indice dal corpus, lo salva compresso su file e misura
+ * Persistenza dell'indice: costruisce l'indice dal corpus, lo salva compresso su file e misura
  * quanto costa ricostruirlo in memoria rispetto a ricaricarlo.
  *
  *   java -cp target/classes ir.Persistenza                      salva data/indice.bin e data/indice_ocr.bin
