@@ -13,8 +13,11 @@ import java.util.TreeMap;
  */
 public class InvertedIndex implements Indice {
     private final Map<String, List<Integer>> costruzione = new TreeMap<>();
+    private final Map<String, List<Integer>> frequenze = new HashMap<>(); // parallela a costruzione
     private final Map<String, PostingList> congelate = new HashMap<>();
     private final List<String> docs = new ArrayList<>();
+    private final List<Integer> lunghezze = new ArrayList<>();
+    private long sommaLunghezze = 0;
 
     /** Aggiunge un documento (una riga articolo) e restituisce il suo docId. */
     public int add(String text) {
@@ -26,11 +29,18 @@ public class InvertedIndex implements Indice {
         int id = docs.size();
         docs.add(text);
         congelate.clear();
+        Map<String, Integer> conteggio = new java.util.LinkedHashMap<>();
+        int n = 0;
         for (String t0 : Tokenizer.tokenize(text)) {
-            String t = correzioni.getOrDefault(t0, t0);
-            List<Integer> p = costruzione.computeIfAbsent(t, k -> new ArrayList<>());
-            if (p.isEmpty() || p.get(p.size() - 1) != id) p.add(id);
+            conteggio.merge(correzioni.getOrDefault(t0, t0), 1, Integer::sum);
+            n++;
         }
+        for (Map.Entry<String, Integer> e : conteggio.entrySet()) {
+            costruzione.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(id);
+            frequenze.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(e.getValue());
+        }
+        lunghezze.add(n);
+        sommaLunghezze += n;
         return id;
     }
 
@@ -53,6 +63,18 @@ public class InvertedIndex implements Indice {
         if (l == null) return PostingList.VUOTA;
         return congelate.computeIfAbsent(term, k -> new PostingList(l.stream().mapToInt(Integer::intValue).toArray()));
     }
+
+    @Override
+    public int[] tf(String term) {
+        List<Integer> l = frequenze.get(term);
+        return l == null ? new int[0] : l.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    @Override
+    public int lunghezza(int docId) { return lunghezze.get(docId); }
+
+    @Override
+    public double lunghezzaMedia() { return docs.isEmpty() ? 0 : (double) sommaLunghezze / docs.size(); }
 
     /** AND di tutti i termini della query, con skip pointers. */
     public List<Integer> searchAnd(String query) {

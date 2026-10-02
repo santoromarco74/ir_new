@@ -30,6 +30,17 @@ class WebServerTest {
     }
 
     @Test
+    void ordinamentoEOr() {
+        WebServer w = web();
+        String h = w.pagina("friggitrice aria", Searcher.ModoFuzzy.NO, false, Ranker.Modello.BM25, true);
+        assertTrue(h.contains("1 risultati"));
+        assertTrue(h.contains("<option value=\"BM25\" selected>"));
+        assertTrue(h.contains("name=\"or\" value=\"1\" checked"));
+        assertTrue(w.pagina("friggitrice frigo", Searcher.ModoFuzzy.NO, false, Ranker.Modello.TFIDF, true).contains("2 risultati"));
+        assertTrue(w.pagina("friggitrice frigo", Searcher.ModoFuzzy.NO, false, Ranker.Modello.TFIDF, false).contains("0 risultati"));
+    }
+
+    @Test
     void parametriUrl() {
         assertEquals(Map.of("q", "lava*", "ocr", "1"), WebServer.parametri("q=lava%2A&ocr=1"));
     }

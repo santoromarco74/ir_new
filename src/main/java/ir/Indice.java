@@ -13,4 +13,12 @@ public interface Indice {
     String doc(int id);
 
     int size();
+
+    /** Frequenze del termine, nello stesso ordine dei suoi postings (tf[i] = occorrenze nel documento postings(term)[i]). */
+    int[] tf(String term);
+
+    /** Numero di token del documento (dopo le eventuali correzioni). */
+    int lunghezza(int docId);
+
+    double lunghezzaMedia();
 }

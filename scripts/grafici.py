@@ -18,9 +18,31 @@ def leggi(path="data/risultati_benchmark.txt"):
             corrente = m.group(1)
             out.setdefault(corrente, {})["tutte"] = tuple(float(x) for x in m.group(3, 4, 5))
             continue
-        m = re.match(r"^\s+(con varianti)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)", riga)
+        m = re.match(r"^\s+(con varianti)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+[\d.]+\s+\(n=", riga)
         if m and corrente:
             out[corrente]["varianti"] = tuple(float(x) for x in m.group(2, 3, 4))
+    return out
+
+
+def leggi_ranking(path="data/risultati_benchmark.txt"):
+    """Ritorna [(sistema, (MAP, P@1, Rprec) tutte, (MAP, P@1, Rprec) con varianti)] dalla sezione ranking."""
+    out, attivo, corrente = [], False, None
+    for riga in open(path, encoding="utf-8"):
+        if riga.startswith("ranking"):
+            attivo = True
+            continue
+        if attivo and riga.startswith("confronti"):
+            break
+        if not attivo:
+            continue
+        m = re.match(r"^(\S.*?)\s{2,}(tutte)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+\(n=", riga)
+        if m:
+            corrente = [m.group(1), tuple(float(x) for x in m.group(3, 4, 5)), None]
+            out.append(corrente)
+            continue
+        m = re.match(r"^\s+(con varianti)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+\(n=", riga)
+        if m and corrente:
+            corrente[2] = tuple(float(x) for x in m.group(2, 3, 4))
     return out
 
 
@@ -65,6 +87,16 @@ def main():
         serie = [[d[n][chiave][i] for n, _ in sistemi] for i in range(3)]
         barre_raggruppate(titolo + ": precisione, richiamo, F1", [e for _, e in sistemi], serie,
                           ["P", "R", "F1"], [COL["P"], COL["R"], COL["F1"]], "docs/img/" + nome)
+    rk = leggi_ranking()
+    if not rk:
+        sys.exit("sezione ranking non trovata in risultati_benchmark.txt")
+    nomi = {"AND, nessun punteggio (docId)": "AND|docId", "AND + TF-IDF": "AND +|TF-IDF", "AND + BM25": "AND +|BM25",
+            "OR, nessun punteggio (docId)": "OR|docId", "OR + TF-IDF": "OR +|TF-IDF", "OR + BM25": "OR +|BM25",
+            "fuzzy sempre, AND + TF-IDF": "fuzzy, AND|+ TF-IDF", "fuzzy sempre, AND + BM25": "fuzzy, AND|+ BM25"}
+    barre_raggruppate("Ranking (214 query esatte): MAP",
+                      [nomi.get(n, n) for n, _, _ in rk],
+                      [[t[0] for _, t, _ in rk], [v[0] for _, _, v in rk]],
+                      ["tutte", "con varianti"], ["#2a6fbb", "#e08a1e"], "docs/img/ranking.svg")
     # confronti skip list e compressione: valori stampati da ir.Benchmark e ir.Compressione
     barre_raggruppate("Skip list: confronti fra docId nell'intersezione (214 query, in migliaia)",
                       ["modello AND parola", "modello AND '2'|(df 312)"], [[8.718, 45.824], [2.343, 6.552]],

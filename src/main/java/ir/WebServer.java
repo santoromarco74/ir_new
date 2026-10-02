@@ -48,6 +48,10 @@ public final class WebServer {
     }
 
     String pagina(String q, Searcher.ModoFuzzy modo, boolean ocr) {
+        return pagina(q, modo, ocr, Ranker.Modello.NESSUNO, false);
+    }
+
+    String pagina(String q, Searcher.ModoFuzzy modo, boolean ocr, Ranker.Modello ord, boolean or) {
         StringBuilder sb = new StringBuilder("<!doctype html><html lang=\"it\"><meta charset=\"utf-8\">"
                 + "<title>Archivio bolle</title><body style=\"font-family:sans-serif;max-width:50em;margin:2em auto\">"
                 + "<h1>Archivio bolle</h1><form method=\"get\"><input name=\"q\" size=\"50\" autofocus value=\"" + esc(q) + "\"> "
@@ -56,9 +60,15 @@ public final class WebServer {
             sb.append("<option value=\"").append(f).append(f == modo ? "\" selected>" : "\">").append(etichetta(f)).append("</option>");
         }
         sb.append("</select></label> <label><input type=\"checkbox\" name=\"ocr\" value=\"1\"")
-                .append(ocr ? " checked" : "").append("> correzione OCR</label></form>");
+                .append(ocr ? " checked" : "").append("> correzione OCR</label><br><label>Ordina per <select name=\"ord\">");
+        for (Ranker.Modello r : Ranker.Modello.values()) {
+            sb.append("<option value=\"").append(r).append(r == ord ? "\" selected>" : "\">")
+                    .append(r == Ranker.Modello.NESSUNO ? "nessun punteggio" : r == Ranker.Modello.TFIDF ? "TF-IDF" : "BM25").append("</option>");
+        }
+        sb.append("</select></label> <label><input type=\"checkbox\" name=\"or\" value=\"1\"")
+                .append(or ? " checked" : "").append("> almeno una parola (OR)</label></form>");
         if (!q.isBlank()) {
-            List<Integer> res = searcher.get(ocr).get(modo).search(q);
+            List<Integer> res = searcher.get(ocr).get(modo).searchRanked(q, ord, !or);
             sb.append("<p>").append(res.size()).append(" risultati (mostrati i primi 50)</p><ul>");
             for (int id : res.subList(0, Math.min(50, res.size()))) sb.append("<li>").append(esc(base.doc(id))).append("</li>");
             sb.append("</ul>");
@@ -98,7 +108,10 @@ public final class WebServer {
             Searcher.ModoFuzzy modo;
             try { modo = Searcher.ModoFuzzy.valueOf(p.getOrDefault("fuzzy", "FALLBACK")); }
             catch (IllegalArgumentException e) { modo = Searcher.ModoFuzzy.FALLBACK; }
-            byte[] body = w.pagina(p.getOrDefault("q", ""), modo, p.containsKey("ocr")).getBytes(StandardCharsets.UTF_8);
+            Ranker.Modello ord;
+            try { ord = Ranker.Modello.valueOf(p.getOrDefault("ord", "NESSUNO")); }
+            catch (IllegalArgumentException e) { ord = Ranker.Modello.NESSUNO; }
+            byte[] body = w.pagina(p.getOrDefault("q", ""), modo, p.containsKey("ocr"), ord, p.containsKey("or")).getBytes(StandardCharsets.UTF_8);
             ex.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
             ex.sendResponseHeaders(200, body.length);
             ex.getResponseBody().write(body);
